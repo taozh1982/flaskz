@@ -53,6 +53,17 @@ class BaseModelMixin:
         return col.key
 
     @classmethod
+    def get_column_by_field(cls, field):
+        """
+        Get the column of the specified field
+        :param field:
+        :return:
+        """
+        for col in cls.get_columns():
+            if (cls.get_column_field(col)) == field:
+                return col
+
+    @classmethod
     def get_primary_column(cls):
         """
          Get the primary column of the model class.

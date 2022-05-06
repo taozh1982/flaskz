@@ -123,6 +123,8 @@ def _ins_to_dict(ins, option=None, path_items=None, path_keys=None):
 
     result = {}
 
+    # with_none_value = item_option.get('with_none_value', False)
+
     for key, value in attrs.items():
 
         if has_item_include is True and key not in item_include:
@@ -162,6 +164,8 @@ def _ins_to_dict(ins, option=None, path_items=None, path_keys=None):
 
         if _value is not None:
             result[key] = _value
+        # elif with_none_value:
+        #     result[key] = None
     return result
 
 

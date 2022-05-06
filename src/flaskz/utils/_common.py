@@ -226,7 +226,7 @@ def merge_dict(dct, *merged_dict_list):
     :return: None
     """
     for dict_item in merged_dict_list:
-        for k, v in dict_item.iteritems():
+        for k, v in dict_item.items(): # #2022-04-22 dict_item.iteritems-->dict_item.items
             if (k in dct and isinstance(dct[k], dict)
                     and isinstance(dict_item[k], Mapping)):
                 merge_dict(dct[k], dict_item[k])

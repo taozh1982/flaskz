@@ -4,6 +4,7 @@ from ._cls import *
 from ._common import *
 #
 from ._magic import *
+from ._func import *
 #
 from ._request_api import *
 #

@@ -98,7 +98,10 @@ def forward_request(url, payload=None, raw_response=False, error_code=500, **kwa
     req_kwargs = {'url': url}
     _payload = payload or ['method', 'data', 'json', 'headers', 'cookies']
     for item in _payload:
-        req_kwargs[item] = getattr(request, item)
+        if item == 'json':  # @2022/05/06: fix request.json -->BadRequest('Content-Type was not 'application/json')
+            req_kwargs[item] = request.get_json(force=True, silent=True)
+        else:
+            req_kwargs[item] = getattr(request, item)
     req_kwargs.update(kwargs)  # kwargs high priority
 
     url_params = req_kwargs.get('url_params')

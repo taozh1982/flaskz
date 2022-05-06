@@ -65,23 +65,41 @@ def get_pss(cls, pss_config=None):
     offset = page.get('offset') or page.get('skip') or 0
     limit = page.get('limit') or page.get('size') or 100000
 
-    # --------------------query--------------------
-    sort_field = sort.get('field')  #
-    order = sort.get('order')
+    # --------------------sort--------------------
+    # sort_field = sort.get('field')
+    # order = sort.get('order')
+    #
+    # if order and sort_field:
+    #     order = str(order).strip().lower()
+    #     if order in ['desc', 'descend', 'descending']:
+    #         order = desc(sort_field)  # default is desc.
+    #     else:
+    #         order = asc(sort_field)
+    # elif sort_field:
+    #     if is_str(sort_field):
+    #         order = asc(sort_field)
+    #     else:
+    #         order = sort_field
+    # else:
+    #     order = None
 
-    if order and sort_field:
-        order = str(order).strip().lower()
-        if order in ['desc', 'descend', 'descending']:
-            order = desc(sort_field)  # default is desc.
-        else:
-            order = asc(sort_field)
-    elif sort_field:
-        if is_str(sort_field):
-            order = asc(sort_field)
-        else:
-            order = sort_field
+    # @2022-04-10 fix exception subs2 = relationship('PerfTestSubModel2', cascade='all,delete-orphan', lazy='joined') ->
+    # Can't resolve label reference for ORDER BY / GROUP BY / DISTINCT etc. Textual SQL expression 'f2' should be explicitly declared as text('f2')
+
+    order = None
+    _order = sort.get('order')
+    if _order and not is_str(_order):  # desc(Model.column)
+        order = _order
     else:
-        order = None
+        sort_field = sort.get('field')
+        if sort_field:
+            sort_column = cls.get_column_by_field(sort_field)
+            if sort_column is not None:
+                if _order and str(_order).strip().lower() in ['desc', 'descend', 'descending']:
+                    order = desc(sort_column)
+
+                if order is None:
+                    order = asc(sort_column)  # default is asc.
 
     return {
         'filter_ands': ands,

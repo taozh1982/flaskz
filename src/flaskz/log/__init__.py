@@ -7,7 +7,7 @@ from logging.handlers import TimedRotatingFileHandler
 from flask import Flask
 from werkzeug.local import LocalProxy
 
-_flaskz_logger: logging.Logger
+_flaskz_logger: logging.Logger = None # @2022-04-27: fix _get_app_logger --> NameError: name '_flaskz_logger' is not defined
 flaskz_logger = LocalProxy(lambda: _get_app_logger())
 
 

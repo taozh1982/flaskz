@@ -98,16 +98,20 @@ def get_db_session():
     If not exist, create a session and return.
     :return:
     """
-    session = get_g_cache('db_session')
+    session = get_g_cache('_flaskz_db_session')
     if session is None:
         session = DBSession()
-        set_g_cache('db_session', session)
+        set_g_cache('_flaskz_db_session', session)
 
     return session
 
 
 def close_db_session():
-    session = get_g_cache('db_session')
+    """
+    Close the session in the g
+    :return:
+    """
+    session = get_g_cache('_flaskz_db_session')
     if session is not None:
         session.close()
 
