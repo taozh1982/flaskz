@@ -1,18 +1,33 @@
-__all__ = ['merge_list_and_args']
+__all__ = ['get_list_args']
 
 
-def merge_list_and_args(keys, args):
-    # returns a single new list combining keys and args
+def get_list_args(params, args):  # @2022-05-11: add
+    """
+    Returns a single new list combining keys and args
+
+    def xxx(names, *args):
+        print(get_list_args(names, args))
+
+    xxx('a', ['b', 'c'])    -->['a', 'b', 'c']
+    xxx('a', 'b', 'c')      -->['a', 'b', 'c']
+    xxx(['a', 'b'], 'c')    -->['a', 'b', 'c']
+    xxx(['a', 'b', 'c'])    -->['a', 'b', 'c']
+
+    :param params:
+    :param args:
+    :return:
+    """
     try:
-        iter(keys)
-        # a string or bytes instance can be iterated, but indicates
-        # keys wasn't passed as a list
-        if isinstance(keys, (bytes, str)):
-            keys = [keys]
+        iter(params)
+        if isinstance(params, (bytes, str)):
+            params = [params]
         else:
-            keys = list(keys)
+            params = list(params)
     except TypeError:
-        keys = [keys]
-    if args:
-        keys.extend(args)
-    return keys
+        params = [params]
+    if args and len(args) > 0:
+        if isinstance(args[0], (tuple, list)):
+            params.extend(*args)
+        else:
+            params.extend(args)
+    return params

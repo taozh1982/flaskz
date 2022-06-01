@@ -1,6 +1,6 @@
 ## 关于
 
-Flaskz是Flask和SQLAlchemy ORM的扩展，主要用于web应用的开发，可以快速灵活的实现各种业务场景和提供API。
+*Flaskz*是*Flask*和*SQLAlchemy ORM*的扩展，主要用于web应用的开发，可以快速灵活的实现各种业务场景和提供API。
 
 ## 使用
 
@@ -15,23 +15,24 @@ Flaskz是Flask和SQLAlchemy ORM的扩展，主要用于web应用的开发，可�
 
 - 标准化/规范化/配置灵活
 - 写好注释和文档
-- 尽量消除IDE中的告警提示
-- 永远不要写临时代码
-- 能用单引号的地方不要用双引号
+- 消除告警提示
 
 ## 版本
 
++ **0.7** `2022/06/01`
+    + [A] 添加`flask.utils.RSACipher`和`flask.utils.AESCipher`类用于加密&解密，需要安装`pycryptodome`包
+    + [A] 添加`flask.utils.append_url_search_params`函数，用于向url中添加search参数
 + **0.6** `2022/05/06`
-    + [修复]数据模型relationship中设置lazy=joined，排序引起的"Can't resolve label reference"问题
-    + [修复]merge_dict方法，使用iteritems导致的bug
-    + [修复]forward_request方法，因为请求没有设置Content-Type=application/json导致获取json引发BadRequest('Content-Type was not 'application/json')异常
-    + [修复]没有调用init_log初始化，调用flaskz_logger引起的NameError(name '_flaskz_logger' is not defined)
+    + [F] 修复当数据模型relationship中设置`lazy=joined`时，排序引起的`"Can't resolve label reference"`问题
+    + [F] 修复`merge_dict`方法，因使用iteritems导致的bug
+    + [F] 修复`forward_request`方法，因请求没有设置`Content-Type=application/json`，获取json时引发的`BadRequest('Content-Type was not 'application/json')`异常
+    + [F] 修复未调用`init_log`初始化，调用flaskz_logger时，引起的`NameError(name '_flaskz_logger' is not defined)`问题
 + **0.3** `2021/11/26`
-    + [添加]FLASKZ_LOGGER_DISABLED参数
-    + [添加]使用文档
-    + [修改]flaskz.utils.forward_request函数，如果url_params参数为空，默认会把request.view_args作为url_params参数来调用api_request
+    + [A] 添加`FLASKZ_LOGGER_DISABLED`参数，用于控制flaskz_logger的启用和禁用
+    + [A] 添加使用文档
+    + [C] 修改`flaskz.utils.forward_request`函数逻辑，如果url_params参数为空时，会把`request.view_args`作为`url_params`参数来调用`api_request`
 + **0.2**
-    + [修复]query_multiple_model Bug
-    + [修改]对部分参数名进行规范化调整
+    + [F] 修复`query_multiple_model`函数bug
+    + [C] 对部分参数名进行规范化调整
 + **0.1**
     + 发布

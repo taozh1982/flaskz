@@ -3,6 +3,8 @@ Not included by default.
 If use it, please install the 'requests' package first
 """
 import inspect
+import textwrap
+import urllib
 
 import requests
 from flask import request
@@ -12,7 +14,7 @@ from ._common import is_dict, slice_str
 from .. import res_status_codes
 from ..log import flaskz_logger
 
-__all__ = ['api_request', 'forward_request']
+__all__ = ['api_request', 'forward_request', 'append_url_search_params']
 
 requests_kwargs = None
 
@@ -73,7 +75,8 @@ def api_request(url, method="GET", url_params=None, base_url="", raw_response=Fa
         result = res.text
         flaskz_logger.debug('Api request completed:\n   status_code={status_code}\n   result={result}'.format(**{
             'status_code': status_code,
-            'result': slice_str(result, 60, 10, '\n......\n'),
+            # 'result': slice_str(result, 60, 10, '\n......\n'),
+            'result': textwrap.shorten(result, 1000)  # @2022-05-26:将日志输出由slice_str改为了shorten
         }))
         if raw_response is True:
             return res
@@ -98,7 +101,7 @@ def forward_request(url, payload=None, raw_response=False, error_code=500, **kwa
     req_kwargs = {'url': url}
     _payload = payload or ['method', 'data', 'json', 'headers', 'cookies']
     for item in _payload:
-        if item == 'json':  # @2022/05/06: fix request.json -->BadRequest('Content-Type was not 'application/json')
+        if item == 'json':  # @2022-05-06: fix request.json -->BadRequest('Content-Type was not 'application/json')
             req_kwargs[item] = request.get_json(force=True, silent=True)
         else:
             req_kwargs[item] = getattr(request, item)
@@ -118,3 +121,23 @@ def forward_request(url, payload=None, raw_response=False, error_code=500, **kwa
         return res[1], error_code
 
     return res.text, res.status_code, res.headers.items()
+
+
+def append_url_search_params(url, params):  # @2022-05-09: add
+    """
+    Appends a specified key/value pair as a new search parameter.
+
+    append_url_search_params('https://example.com',{'foo':1,'bar':2}) --> 'https://example.com?foo=1&bar=2' # append
+    append_url_search_params('https://example.com?foo=1&bar=2',{'baz':3}) --> 'https://example.com?foo=1&bar=2&baz=3' # append
+    append_url_search_params('https://example.com?foo=1&bar=2',{'bar':3}) --> 'https://example.com?foo=1&bar=3' # replace
+    append_url_search_params('a/b',{'c':3}) --> 'a/b?c=3'
+
+    :param url:
+    :param params:
+    :return:
+
+    """
+    url_parts = urllib.parse.urlparse(url)
+    query = dict(urllib.parse.parse_qsl(url_parts.query))
+    query.update(params)
+    return url_parts._replace(query=urllib.parse.urlencode(query)).geturl()

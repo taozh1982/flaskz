@@ -105,7 +105,7 @@ class RSACipher:
         try:
             verifier = PKCS1_v1_5.new(RSACipher._import_rsa_key(public_key))
             return verifier.verify(SHA256.new(text), base64.b64decode(signature))
-        except Exception:
+        except (Exception,):
             return False
 
     @staticmethod
