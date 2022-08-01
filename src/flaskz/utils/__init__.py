@@ -10,5 +10,3 @@ from ._request_api import *
 #
 from ._request_args import *
 from ._response import *
-#
-from ._cypher import *

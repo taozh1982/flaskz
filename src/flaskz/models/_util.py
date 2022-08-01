@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 
-from flask import g
+from flask import g, has_request_context
 
 from . import DBSession
 from ._model import ModelMixin
@@ -82,14 +82,17 @@ def query_multiple_model(*cls_list):
 
 
 def append_debug_queries(query):
-    debug_queries = getattr(g, 'z_debug_queries', None)
-    if debug_queries is None:
-        g.z_debug_queries = debug_queries = []
-    debug_queries.append(query)
+    if has_request_context():  # @2022-07-26 add,
+        debug_queries = getattr(g, 'z_debug_queries', None)
+        if debug_queries is None:
+            g.z_debug_queries = debug_queries = []
+        debug_queries.append(query)
 
 
 def get_debug_queries():
-    return getattr(g, 'z_debug_queries', [])
+    if has_request_context():  # @2022-07-26 add,
+        return getattr(g, 'z_debug_queries', [])
+    return []
 
 
 def get_db_session():
@@ -98,11 +101,13 @@ def get_db_session():
     If not exist, create a session and return.
     :return:
     """
-    session = get_g_cache('_flaskz_db_session')
-    if session is None:
+    if has_request_context():  # @2022-07-26 add, make sure work without flask request
+        session = get_g_cache('_flaskz_db_session')
+        if session is None:
+            session = DBSession()
+            set_g_cache('_flaskz_db_session', session)
+    else:
         session = DBSession()
-        set_g_cache('_flaskz_db_session', session)
-
     return session
 
 
@@ -111,9 +116,10 @@ def close_db_session():
     Close the session in the g
     :return:
     """
-    session = get_g_cache('_flaskz_db_session')
-    if session is not None:
-        session.close()
+    if has_request_context():  # @2022-07-26 add
+        session = get_g_cache('_flaskz_db_session')
+        if session is not None:
+            session.close()
 
 
 @contextmanager

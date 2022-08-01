@@ -19,6 +19,10 @@
 
 ## 版本
 
++ **0.8** `2022/08/01`
+    + [A] `BaseModelMixin`和`ModelMixin`模型扩展类添加没有flask上下文环境时的使用支持
+    + [A] 添加`flaskz.ext`包用于存放扩展工具类，请注意ext包中的代码依赖的第三方包，不在flaskz的install_requires中，需要单独安装
+    + [C] 将`flask.utils.RSACipher`和`flask.utils.AESCipher`类所在的`cypher.py`文件移到了`flaskz.ext`包中
 + **0.7** `2022/06/01`
     + [A] 添加`flask.utils.RSACipher`和`flask.utils.AESCipher`类用于加密&解密，需要安装`pycryptodome`包
     + [A] 添加`flask.utils.append_url_search_params`函数，用于向url中添加search参数
