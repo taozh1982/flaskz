@@ -82,7 +82,7 @@ def query_multiple_model(*cls_list):
 
 
 def append_debug_queries(query):
-    if has_request_context():  # @2022-07-26 add,
+    if _has_g_context():  # @2022-07-26 add,
         debug_queries = getattr(g, 'z_debug_queries', None)
         if debug_queries is None:
             g.z_debug_queries = debug_queries = []
@@ -90,9 +90,13 @@ def append_debug_queries(query):
 
 
 def get_debug_queries():
-    if has_request_context():  # @2022-07-26 add,
+    if _has_g_context():  # @2022-07-26 add,
         return getattr(g, 'z_debug_queries', [])
     return []
+
+
+def _has_g_context():
+    return has_request_context() or g is not None
 
 
 def get_db_session():
@@ -101,7 +105,7 @@ def get_db_session():
     If not exist, create a session and return.
     :return:
     """
-    if has_request_context():  # @2022-07-26 add, make sure work without flask request
+    if _has_g_context():  # @2022-07-26 add, make sure work without flask request
         session = get_g_cache('_flaskz_db_session')
         if session is None:
             session = DBSession()
@@ -116,7 +120,7 @@ def close_db_session():
     Close the session in the g
     :return:
     """
-    if has_request_context():  # @2022-07-26 add
+    if _has_g_context():  # @2022-07-26 add
         session = get_g_cache('_flaskz_db_session')
         if session is not None:
             session.close()
