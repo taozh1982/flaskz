@@ -19,6 +19,10 @@
 
 ## 版本
 
+- **1.0** `2022/12/01`
+    - [A] 添加`flask.utils.set_timeout`和`flask.utils.set_interval`函数用于延迟和周期性函数执行
+    - [A] `flask.ext.ssh`添加`timeout`参数以设置超时时间(登录&命令执行)
+    - [F] 修复`BaseModelMixin.bulk_delete`方法因某条数据删除失败导致的操作中断和部分删除问题
 - **0.9** `2022/10/01`
     - [A] 添加`flaskz.auth`包，提供了JWS授权功能
     - [A] 添加`flaskz.ext.ssh`，提供了ssh相关功能(`pip install paramiko`)
