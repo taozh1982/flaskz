@@ -4,17 +4,21 @@ pip install paramiko
 import errno
 import os
 import re
+import socket
 import stat
 import time
 from contextlib import contextmanager
+from datetime import datetime
 
 import paramiko
+from paramiko.ssh_exception import SSHException
+from paramiko.util import retry_on_signal
 
 
 @contextmanager
 def ssh_session(hostname, username, password=None, port=22, **kwargs):
     """
-    with ssh_session(host, username, password) as ssh:
+    with ssh_session(host, username, password, timeout=20) as ssh:
         ssh.run_command("ls -l")
     """
     ssh_client = SSH(hostname=hostname, username=username, password=password, port=port, **kwargs)
@@ -25,12 +29,14 @@ def ssh_session(hostname, username, password=None, port=22, **kwargs):
 class SSH(object):
     def __init__(self, hostname, username, password=None, port=22, **kwargs):
         """
-        ssh = SSH(host, username, password)
+        ssh = SSH(host, username, password, timeout=20)
         """
         self._username = username
         self._password = password
 
-        self.transport = paramiko.Transport((hostname, port))
+        self._timeout = kwargs.pop('timeout', 0)
+        self.transport = paramiko.Transport(_create_socket(hostname=hostname, port=port, timeout=self._timeout))
+        # self.transport = paramiko.Transport((hostname, port))
         self.transport.connect(username=username, password=password, **kwargs)
 
         self.ssh = paramiko.SSHClient()
@@ -47,7 +53,8 @@ class SSH(object):
     def channel(self):
         if not hasattr(self, '_channel'):
             self._channel = self.ssh.invoke_shell(height=100000)
-            # self._channel.settimeout(1)
+            if self._timeout > 0:
+                self._channel.settimeout(self._timeout)
         return self._channel
 
     def run_command(self, command):
@@ -167,6 +174,39 @@ class SSH(object):
         return ''.join(res_list)
 
 
+def _create_socket(hostname, port, timeout=0):
+    """
+    Create socket instance
+    If timeout>0, set the timeout of the instance, otherwise use the default timeout(maybe 75s).
+    :param hostname:
+    :param port:
+    :param timeout:
+    :return:
+    """
+    reason = "No suitable address family"
+    addrinfos = socket.getaddrinfo(
+        hostname, port, socket.AF_UNSPEC, socket.SOCK_STREAM
+    )
+    for family, socktype, proto, canonname, sockaddr in addrinfos:
+        if socktype == socket.SOCK_STREAM:
+            sock = socket.socket(family, socket.SOCK_STREAM)
+            if timeout > 0:
+                sock.settimeout(timeout)
+            now = datetime.now()
+            try:
+                retry_on_signal(lambda: sock.connect((hostname, port)))
+            except socket.error as e:
+                reason = str(e)
+                print(datetime.now() - now)
+            else:
+                break
+    else:
+        raise SSHException(
+            "Unable to connect to {}: {}".format(hostname, reason)
+        )
+    return sock
+
+
 def _clear_redundant(txt, command):
     """
     Clear the redundant information
@@ -203,29 +243,35 @@ def _remove_end_slash(path):
 if __name__ == '__main__':
     servers = [
         {  # Centos
-            'host': '10.124.5.222',
-            'username': 'root',
-            'password': 'cisco123',
-            'commands': ['ls -l'  , 'cd ../opt', '\cp a.txt b.txt']
-        },
-        {  # Ubuntu
-            'host': '10.124.5.198',
-            'username': 'root',
+            'host': '10.124.4.21',
+            'username': 'admin1',
             'password': 'Cisco@123',
-            'commands': ['ls -l']
+            'commands': ['show int eth3/1']
         },
-        {  # Ubuntu, test input password
-            'host': '10.124.205.216',
-            'username': 'cisco',
-            'password': 'cisco123',
-            'commands': ['sudo ls -l']
-        },
-        {  # NX-OS
-            'host': '10.124.11.134',
-            'username': 'admin',
-            'password': 'Cisco@123',
-            'commands': ['show version', 'show running-config']
-        },
+        # {  # Centos
+        #     'host': '10.124.5.222',
+        #     'username': 'root',
+        #     'password': 'cisco123',
+        #     'commands': ['ls -l', 'cd ../opt', '\cp a.txt b.txt']
+        # },
+        # {  # Ubuntu
+        #     'host': '10.124.5.198',
+        #     'username': 'root',
+        #     'password': 'Cisco@123',
+        #     'commands': ['ls -l']
+        # },
+        # {  # Ubuntu, test input password
+        #     'host': '10.124.205.216',
+        #     'username': 'cisco',
+        #     'password': 'cisco123',
+        #     'commands': ['sudo ls -l']
+        # },
+        # {  # NX-OS
+        #     'host': '10.124.11.134',
+        #     'username': 'admin',
+        #     'password': 'Cisco@123',
+        #     'commands': ['show version', 'show running-config']
+        # },
         # {  # NX-OS
         #     'host': '10.66.94.62',
         #     'username': 'admin',
@@ -234,8 +280,8 @@ if __name__ == '__main__':
         # }
     ]
     for item in servers:
-        with ssh_session(item.get('host'), item.get('username'), item.get('password')) as ssh:
-            print((item.get('host') + " : " + str(item.get("commands"))).center(100, '*'))
+        print((item.get('host') + " : " + str(item.get("commands"))).center(100, '*'))
+        with ssh_session(item.get('host'), item.get('username'), item.get('password'), timeout=10) as ssh:
             print(ssh.run_command_list(item.get('commands'), True))
 
     # ssh.sftp_get_dir("/usr/projects/git/srte/src/", "/Users/taozh/Work/Codes/ssh_test/sftp")

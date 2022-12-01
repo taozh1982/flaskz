@@ -37,7 +37,13 @@ def init_model(app):
         cursor.close()
 
     try:
-        engine = create_engine(database_uri, echo=app_config.get('FLASKZ_DATABASE_ECHO'), pool_recycle=app_config.get('FLASKZ_DATABASE_POOL_RECYCLE'))
+        # @2022-11-29: add, filter none config
+        engine_kwargs = {}
+        for engine_key, config_key in {'echo': 'FLASKZ_DATABASE_ECHO', 'pool_recycle': 'FLASKZ_DATABASE_POOL_RECYCLE'}.items():
+            if config_key in app_config:
+                engine_kwargs[engine_key] = app_config.get(config_key)
+        engine = create_engine(database_uri, **engine_kwargs)
+        # engine = create_engine(database_uri, echo=app_config.get('FLASKZ_DATABASE_ECHO'), pool_recycle=app_config.get('FLASKZ_DATABASE_POOL_RECYCLE'))
         # Session.configure(bind=engine)
         DBSession.configure(binds={ModelBase: engine})  # for multiple db
         with engine.connect():  # connect test

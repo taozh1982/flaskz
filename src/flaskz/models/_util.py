@@ -1,9 +1,9 @@
 from contextlib import contextmanager
 
-from flask import g, has_request_context
+from flask import g
 
 from . import DBSession
-from ._model import ModelMixin
+from ._base import BaseModelMixin
 from ..utils import get_g_cache, set_g_cache
 
 __all__ = ['create_instance', 'create_relationships',
@@ -96,7 +96,10 @@ def get_debug_queries():
 
 
 def _has_g_context():
-    return has_request_context() or g is not None
+    if not g:  # @2022-11-28: change, (not g) != (g is None)
+        return False
+    return True
+    # return has_request_context() or g is not None
 
 
 def get_db_session():
@@ -160,12 +163,12 @@ def model_to_dict(ins, option=None):
     if isinstance(ins, list):
         data_list = []
         for item in ins:
-            if isinstance(item, ModelMixin):
+            if isinstance(item, BaseModelMixin):  # @2022-11-28: change, ModelMixin --> BaseModelMixin
                 data_list.append(item.to_dict(option))
             else:
                 data_list.append(item)
         return data_list
-    elif isinstance(ins, ModelMixin):
+    elif isinstance(ins, BaseModelMixin):
         return ins.to_dict(option)
     else:
         return ins

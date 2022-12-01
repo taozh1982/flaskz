@@ -252,6 +252,7 @@ class BaseModelMixin:
         """
         Perform a bulk add of the given list of mapping dictionaries
 
+        sa version upgrade: https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html
         :param items:
         :param with_relationship:
         :return:
@@ -318,6 +319,8 @@ class BaseModelMixin:
     def bulk_update(cls, items, with_relationship=False):
         """
         Perform a bulk update of the given list of mapping dictionaries
+
+        sa version upgrade: https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html
         :param items:
         :param with_relationship:
         :return:
@@ -380,19 +383,29 @@ class BaseModelMixin:
         """
         Perform a bulk delete of the given list of mapping dictionaries
 
+            Role.bulk_delete([1,2,3])
+
+        .. versionupdated:: 1.0
+
+        sa version upgrade: https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html
         :param items:
         :return:
         """
         if len(items) == 0:
             return
+        pk = cls.get_primary_field()
         with db_session() as session:
+            pk_list = []
             for item in items:
                 if is_dict(item):
-                    instance = cls.query_by(item)
+                    instance = session.query(cls).filter_by(**item).limit(1).first()
+                    if instance:
+                        pk_list.append(getattr(instance, pk))
                 else:
-                    instance = cls.query_by_pk(item)
-                if instance:
-                    session.delete(instance)
+                    pk_list.append(item)
+            # @2022-11-03: Use 'where' and 'in' to rewrite bulk delete to avoid partial delete scenarios
+            if len(pk_list) > 0:
+                session.query(cls).filter(getattr(cls, pk).in_(pk_list)).delete()
 
     # -------------------------------------------query-------------------------------------------
 

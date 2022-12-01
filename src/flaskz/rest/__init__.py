@@ -105,7 +105,7 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
         @api_blueprint.route(url_prefix + '/upsert/', methods=['POST'])
         @rest_permission_required(module, 'upsert')
         @gen_route_method('upsert', url_prefix)
-        def update():
+        def upsert():
             """
             Update the model data by the json.
             :return:

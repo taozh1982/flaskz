@@ -15,10 +15,13 @@ def get_app_path(*path):
     return os.path.join(os.getcwd(), *path)
 
 
-def get_app_config(key):
+def get_app_config(key=None):
     """
     Set the specified config value of the current app
     :param key:
     :return:
     """
-    return current_app.config.get(key)
+    app_config = current_app.config
+    if key is None:
+        return app_config
+    return app_config.get(key)
