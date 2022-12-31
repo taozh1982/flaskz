@@ -11,14 +11,10 @@
 5. [☞基于Flaskz的管理系统开发模板 Flaskz-admin](http://zhangyiheng.com/blog/articles/py_flaskz_admin.html)
 6. [☞使用手册](http://zhangyiheng.com/blog/articles/py_flaskz_manual.html)
 
-## 规范
-
-- 标准化/规范化/配置灵活
-- 写好注释和文档
-- 消除告警提示
-
 ## 版本
 
+- **1.1** `2023/01/01`
+    - [F] 修复BaseModelMixin的`update_db`和`delete_db`方法在非flask应用或没有flask应用上下文时的操作失败问题
 - **1.0** `2022/12/01`
     - [A] 添加`flask.utils.set_timeout`和`flask.utils.set_interval`函数用于延迟和周期性函数执行
     - [A] `flask.ext.ssh`添加`timeout`参数以设置超时时间(登录&命令执行)

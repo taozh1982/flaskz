@@ -1,9 +1,10 @@
 from sqlalchemy.exc import IntegrityError
 
 from ._base import BaseModelMixin
+from ._util import is_model_mixin_instance
 from .. import res_status_codes
 from ..log import flaskz_logger
-from ..utils import is_str, is_dict
+from ..utils import is_dict
 
 __all__ = ['ModelMixin']
 
@@ -58,7 +59,7 @@ class ModelMixin(BaseModelMixin):
         try:
             data = cls.get_add_data(data)
             check_result = cls.check_add_data(data)
-            if check_result is not True:
+            if check_result is not True:  # ex)db_data_already_exist
                 return False, check_result
 
             before_result = cls.before_add(data)
@@ -68,14 +69,10 @@ class ModelMixin(BaseModelMixin):
             finally:
                 cls.after_add(data, instance, before_result)  # after_add execute regardless of whether the addition is successful
         except Exception as e:
-            print(e)
             flaskz_logger.exception(e)
             return False, res_status_codes.db_add_err
 
-        if before_result is not True:
-            return False, before_result  # ex)db_data_already_exist
-
-        return True, instance
+        return _op_result(before_result, instance)
 
     # -------------------------------------------update-------------------------------------------
     @classmethod
@@ -127,7 +124,7 @@ class ModelMixin(BaseModelMixin):
         try:
             data = cls.get_update_data(data)
             check_result = cls.check_update_data(data)
-            if check_result is not True:
+            if check_result is not True:  # ex)db_data_not_found / db_data_already_exist
                 return False, check_result
 
             before_result = cls.before_update(data)
@@ -140,13 +137,7 @@ class ModelMixin(BaseModelMixin):
             flaskz_logger.exception(e)
             return False, res_status_codes.db_update_err
 
-        if before_result is not True:
-            return False, before_result  # ex)db_data_not_found
-
-        if is_str(instance):
-            return False, instance
-        else:
-            return True, instance
+        return _op_result(before_result, instance)
 
     # -------------------------------------------delete-------------------------------------------
     @classmethod
@@ -201,7 +192,7 @@ class ModelMixin(BaseModelMixin):
         try:
             pk_value = cls.get_delete_data(pk_value)
             check_result = cls.check_delete_data(pk_value)
-            if check_result is not True:
+            if check_result is not True:  # ex)db_data_not_found
                 return False, check_result
 
             before_result = cls.before_delete(pk_value)
@@ -217,13 +208,7 @@ class ModelMixin(BaseModelMixin):
             flaskz_logger.exception(e)
             return False, res_status_codes.db_delete_err
 
-        if before_result is not True:
-            return False, before_result
-
-        if is_str(instance):
-            return False, instance
-        else:
-            return True, instance
+        return _op_result(before_result, instance)
 
     # -------------------------------------------query-------------------------------------------
     @classmethod
@@ -252,3 +237,11 @@ class ModelMixin(BaseModelMixin):
         except Exception as e:
             flaskz_logger.exception(e)
             return False, res_status_codes.db_query_err
+
+
+def _op_result(before_result, instance):
+    if before_result is not True:
+        return False, before_result
+    if not is_model_mixin_instance(instance):
+        return False, instance
+    return True, instance

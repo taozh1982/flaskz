@@ -10,7 +10,9 @@ __all__ = ['create_instance', 'create_relationships',
            'query_multiple_model',
            'append_debug_queries', 'get_debug_queries',
            'get_db_session', 'db_session', 'close_db_session',
-           'model_to_dict']
+           'model_to_dict',
+           'is_model_mixin_instance'
+           ]
 
 
 def create_instance(model_cls, data, create_relationship=True):
@@ -163,12 +165,21 @@ def model_to_dict(ins, option=None):
     if isinstance(ins, list):
         data_list = []
         for item in ins:
-            if isinstance(item, BaseModelMixin):  # @2022-11-28: change, ModelMixin --> BaseModelMixin
+            if is_model_mixin_instance(item):  # @2022-11-28: change, ModelMixin --> BaseModelMixin
                 data_list.append(item.to_dict(option))
             else:
                 data_list.append(item)
         return data_list
-    elif isinstance(ins, BaseModelMixin):
+    elif is_model_mixin_instance(ins):
         return ins.to_dict(option)
     else:
         return ins
+
+
+def is_model_mixin_instance(obj):
+    """
+    Check if the object is an instance of the BaseModelMixin
+    :param obj:
+    :return:
+    """
+    return isinstance(obj, BaseModelMixin)

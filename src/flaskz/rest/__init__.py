@@ -42,14 +42,14 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
             request_json = request.json
             req_log_data = json.dumps(request_json)
 
-            result = model_cls.add(request_json)
-            res_data = model_to_dict(result[1], to_json_option)
+            success, data = model_cls.add(request_json)
+            res_data = model_to_dict(data, to_json_option)
 
             res_log_data = get_log_data(res_data)
-            log_operation(module, 'add', result[0], req_log_data, res_log_data)
-            flaskz_logger.info(get_rest_log_msg('Add {} data'.format(class_name), req_log_data, result[0], res_log_data))
+            log_operation(module, 'add', success, req_log_data, res_log_data)
+            flaskz_logger.info(get_rest_log_msg('Add {} data'.format(class_name), req_log_data, success, res_log_data))
 
-            return create_response(result[0], res_data)
+            return create_response(success, res_data)
 
     if 'delete' in routers:
         @api_blueprint.route(url_prefix + '/<did>', methods=['DELETE'])
@@ -60,14 +60,14 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
             delete model data by id
             :return:
             """
-            result = model_cls.delete(did)
-            res_data = model_to_dict(result[1], to_json_option)
+            success, data = model_cls.delete(did)
+            res_data = model_to_dict(data, to_json_option)
 
             res_log_data = get_log_data(res_data)
-            log_operation(module, 'delete', result[0], did, res_log_data)
-            flaskz_logger.info(get_rest_log_msg('Delete {} data'.format(class_name), did, result[0], res_log_data))
+            log_operation(module, 'delete', success, did, res_log_data)
+            flaskz_logger.info(get_rest_log_msg('Delete {} data'.format(class_name), did, success, res_log_data))
 
-            return create_response(result[0], res_data)
+            return create_response(success, res_data)
 
     if 'update' in routers:
         @api_blueprint.route(url_prefix + '/', methods=['PATCH'])
@@ -81,14 +81,14 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
             request_json = request.json
             req_log_data = json.dumps(request_json)
 
-            result = model_cls.update(request_json)
-            res_data = model_to_dict(result[1], to_json_option)
+            success, data = model_cls.update(request_json)
+            res_data = model_to_dict(data, to_json_option)
 
             res_log_data = get_log_data(res_data)
-            log_operation(module, 'update', result[0], req_log_data, res_log_data)
-            flaskz_logger.info(get_rest_log_msg('Update {} data'.format(class_name), req_log_data, result[0], res_log_data))
+            log_operation(module, 'update', success, req_log_data, res_log_data)
+            flaskz_logger.info(get_rest_log_msg('Update {} data'.format(class_name), req_log_data, success, res_log_data))
 
-            return create_response(result[0], res_data)
+            return create_response(success, res_data)
 
     # if 'update' in routers:
     #     @api_blueprint.route(url_prefix + '/', methods=['PUT'])
@@ -115,17 +115,17 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
 
             if request_json.get('id'):
                 action = "update"
-                result = model_cls.update(request_json)
+                success, data = model_cls.update(request_json)
             else:
                 action = "add"
-                result = model_cls.add(request_json)
+                success, data = model_cls.add(request_json)
 
-            res_data = model_to_dict(result[1], to_json_option)
+            res_data = model_to_dict(data, to_json_option)
             res_log_data = get_log_data(res_data)
-            log_operation(module, action, result[0], req_log_data, res_log_data)
-            flaskz_logger.info(get_rest_log_msg('Upsert {} data'.format(class_name), req_log_data, result[0], res_log_data))
+            log_operation(module, action, success, req_log_data, res_log_data)
+            flaskz_logger.info(get_rest_log_msg('Upsert {} data'.format(class_name), req_log_data, success, res_log_data))
 
-            return create_response(result[0], res_data)
+            return create_response(success, res_data)
 
     if 'query' in routers:
         @api_blueprint.route(url_prefix + '/', methods=['GET'])
@@ -136,11 +136,11 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
             Query all the model data
             :return:
             """
-            result = model_cls.query_all()
-            res_data = model_to_dict(result[1], to_json_option)
+            success, data = model_cls.query_all()
+            res_data = model_to_dict(data, to_json_option)
 
-            flaskz_logger.debug(get_rest_log_msg('Query all {} data'.format(class_name), None, result[0], res_data))
-            return create_response(result[0], res_data)
+            flaskz_logger.debug(get_rest_log_msg('Query all {} data'.format(class_name), None, success, res_data))
+            return create_response(success, res_data)
 
     if 'query_pss' in routers:
         @api_blueprint.route(url_prefix + '/query_pss/', methods=['GET', 'POST'])
@@ -154,13 +154,12 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
             request_json = request.json
             req_log_data = json.dumps(request_json)
 
-            result = model_cls.query_pss(get_pss(model_cls, request_json))
-            res_data = result[1]
-            if result[0] is True:
-                res_data['data'] = model_to_dict(res_data['data'], to_json_option)
+            success, data = model_cls.query_pss(get_pss(model_cls, request_json))
+            if success is True:
+                data['data'] = model_to_dict(data.get('data', []), to_json_option)
 
-            flaskz_logger.debug(get_rest_log_msg('Query pss {} data'.format(class_name), req_log_data, result[0], res_data))
-            return create_response(result[0], res_data)
+            flaskz_logger.debug(get_rest_log_msg('Query pss {} data'.format(class_name), req_log_data, success, data))
+            return create_response(success, data)
 
     if multiple_option and 'query_multiple' in routers:
         @api_blueprint.route(url_prefix + '/query_multiple/', methods=['GET'])
@@ -201,7 +200,8 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
                     })
 
             result = query_multiple_model(*model_cls_list)
-            if result[0] is False:
+
+            if type(result) is tuple:
                 success = False
                 res_data = model_to_dict(result[1])
             else:

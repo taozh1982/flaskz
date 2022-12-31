@@ -19,7 +19,7 @@ class _IntervalTimer(object):
 
     def _run(self):
         self.is_started = False
-        if self.function(*self.args, **self.kwargs) is not False:
+        if self.function(*self.args, **self.kwargs) is not False:  # The callback function should do exception catching
             self.start()
 
     def start(self):
@@ -49,7 +49,7 @@ def set_interval(interval, function, args=None, kwargs=None, immediately=False, 
 
     :param daemon: if true, the timer will be daemon(Daemon threads are abruptly stopped at shutdown)
     :param interval: time interval in milliseconds
-    :param function:
+    :param function: callback function, which should do exception catching*
     :param args:
     :param kwargs:
     :param immediately: If True, the function will be executed immediately, otherwise it will be executed after the interval time

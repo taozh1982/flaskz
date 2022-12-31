@@ -264,8 +264,6 @@ class BaseModelMixin:
                 ins_list = []
                 for data_item in items:
                     ins_list.append(create_instance(cls, data_item))
-                    # instance = create_instance(cls, data_item)
-                    # session.add(instance)
                 session.add_all(ins_list)
         else:
             with db_session() as session:
@@ -304,15 +302,14 @@ class BaseModelMixin:
         :return:
         """
         pk_value = cls._get_pk_value(data)
-        instance = cls.query_by_pk(pk_value)
-        if instance:
-            with db_session() as session:
-                # Only the fields in json will be updated
-                for field in cls.get_columns_json(data):
-                    setattr(instance, field, data.get(field))
-                relationships = create_relationships(cls, data)
-                for field in relationships:
-                    setattr(instance, field, relationships[field])
+        if pk_value is None:  # pk value does not exist
+            return res_status_codes.db_data_not_found
+
+        with db_session() as session:
+            instance = session.query(cls).get(pk_value)  # Scenarios for extending BaseModelMixin instead of ModelMixin
+            if instance is None:  # Object does not exist
+                return res_status_codes.db_data_not_found
+            cls._update_ins(instance, data)  # @2022-12-01 change to ensure the updated instance and the setattr action in the same session
         return instance
 
     @classmethod
@@ -330,17 +327,23 @@ class BaseModelMixin:
 
         if with_relationship is True:
             with db_session() as session:
-                for item in items:
-                    pk_value = cls._get_pk_value(item)
-                    instance = cls.query_by_pk(pk_value)
-                    for field in cls.get_columns_json(item):
-                        setattr(instance, field, item.get(field))
-                    relationships = create_relationships(cls, item)
-                    for field in relationships:
-                        setattr(instance, field, relationships[field])
+                for data in items:
+                    pk_value = cls._get_pk_value(data)
+                    if pk_value is not None:
+                        cls._update_ins(session.query(cls).get(pk_value), data)  # @2022-12-01 change to ensure the updated instance and the setattr action in the same session
         else:
             with db_session() as session:
                 session.bulk_update_mappings(cls, items)
+
+    @classmethod
+    def _update_ins(cls, instance, data):
+        if instance:
+            for field in cls.get_columns_json(data):  # Only the fields in json will be updated
+                setattr(instance, field, data.get(field))
+            relationships = create_relationships(cls, data)
+            for field in relationships:
+                setattr(instance, field, relationships[field])
+        return instance
 
     # -------------------------------------------delete-------------------------------------------
     @classmethod
@@ -357,9 +360,8 @@ class BaseModelMixin:
         if pk_value is None:
             return res_status_codes.db_data_not_found
 
-        primary_field = cls.get_primary_field()
-        data = {primary_field: pk_value}
-
+        pk = cls.get_primary_field()
+        data = {pk: pk_value}
         return cls._check_exist(data)
 
     @classmethod
@@ -370,11 +372,12 @@ class BaseModelMixin:
         :param pk_value:
         :return:
         """
-        instance = cls.query_by_pk(pk_value)
-        if instance is None:  # Object does not exist
+        if pk_value is None:  # Object does not exist
             return res_status_codes.db_data_not_found
-
-        with db_session() as session:
+        with db_session() as session:  # @2022-12-01 change to ensure the deleted instance and the delete action in the same session
+            instance = session.query(cls).get(pk_value)
+            if instance is None:  # Object does not exist
+                return res_status_codes.db_data_not_found
             session.delete(instance)
         return instance
 
@@ -558,9 +561,9 @@ class BaseModelMixin:
         :param data:
         :return:
         """
-        primary_field = cls.get_primary_field()
-        if primary_field:
-            return data.get(primary_field)
+        pk = cls.get_primary_field()
+        if pk:
+            return data.get(pk)
 
     @classmethod
     def _check_exist(cls, data):
@@ -586,9 +589,9 @@ class BaseModelMixin:
         if result is None:
             return True
 
-        primary_field = cls.get_primary_field()
+        pk = cls.get_primary_field()
         pk_value = cls._get_pk_value(data)
-        if pk_value is not None and pk_value == getattr(result, primary_field):
+        if pk_value is not None and pk_value == getattr(result, pk):
             return True
         return res_status_codes.db_data_already_exist  # used to return to the client
 
