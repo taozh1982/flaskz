@@ -1,7 +1,7 @@
 from sqlalchemy import text
 
 from .. import res_status_codes
-from ..utils import find_list, filter_list, is_str, is_dict, ins_to_dict
+from ..utils import find_list, filter_list, is_str, is_dict, ins_to_dict, get_dict_value_by_type
 
 __all__ = ['BaseModelMixin']
 
@@ -511,12 +511,47 @@ class BaseModelMixin:
         """
         Query data by search, pagination and sort condition.
 
+        Example:
+        result, result = TemplateModel.query_pss(get_pss(   # use flaskz.utils.get_pss to format condition
+            TemplateModel, {   # FROM templates
+                "search": {                         # WHERE
+                    "like": "t",                    # name like '%t%' OR description like '%t%' (TemplateModel.like_columns = ['name', description])
+                    "age": {                        # AND (age>1 AND age<20)
+                        ">": 1,                     # operator:value, operators)'='/'>'/'<'/'>='/'<='/'BETWEEN'/'LIKE'/'IN'
+                        "<": 20
+                    },
+                    "email": "taozh@focus-ui.com",  # AND (email='taozh@focus-ui.com')
+                    "_ors": {                       # AND (country='America' OR country='Canada')
+                        "country": "America||Canada"
+                    },
+                    "_ands": {                      # AND (grade>1 AND grade<5)
+                        "grade": {
+                            ">": 1,
+                            "<": 5
+                        }
+                    }
+                },
+                "sort": {                           # ORDER BY templates.name ASC
+                    "field": "name",
+                    "order": "asc"
+                },
+                "page": {                           # LIMIT ? OFFSET ? (20, 0)
+                    "offset": 0,
+                    "size": 20
+                }
+            }))
+
+        # sql
         SELECT templates.id AS templates_id, templates.name AS templates_name, templates.age AS templates_age, templates.email AS templates_email,
-                templates.description AS templates_description, templates.created_at AS templates_created_at, templates.updated_at AS templates_updated_at
+                templates.country AS templates_country, templates.grade AS templates_grade, templates.description AS templates_description,
+                templates.created_at AS templates_created_at, templates.updated_at AS templates_updated_at
         FROM templates
-        WHERE (name like '%t%' OR description like '%t%') AND (age>1 AND age<20) AND (email='t1@focus-ui.com' OR email='t2@focus-ui.com') ORDER BY templates.name ASC
-         LIMIT ? OFFSET ?
-        (20, 0)
+        WHERE
+            (name like '%t%' OR description like '%t%')
+            AND (grade>1 AND grade<5 AND age>1 AND age<20 AND email='taozh@focus-ui.com')
+            AND (country='America' OR country='Canada')
+        ORDER BY templates.name ASC
+        LIMIT ? OFFSET ? (20, 0)
 
         :param pss_option:
         :return:
@@ -524,8 +559,11 @@ class BaseModelMixin:
         filter_likes = pss_option.get('filter_likes', [])
         filter_ands = pss_option.get('filter_ands', [])
         filter_ors = pss_option.get('filter_ors', [])
-        offset = pss_option.get('offset', 0)
-        limit = pss_option.get('limit', 0)
+        # offset = pss_option.get('offset', 0)
+        # limit = pss_option.get('limit', 0)
+        offset = max(get_dict_value_by_type(pss_option, 'offset', int, 0), 0)  # @2023-01-09 update, add type check
+        limit = max(get_dict_value_by_type(pss_option, 'limit', int, 0), 0)
+
         # pss_json.get('order') or cls.get_query_default_order()
         # bool(pss_json.get('order')) --> Boolean value of this clause is not defined
         order = pss_option.get('order')
@@ -541,7 +579,7 @@ class BaseModelMixin:
             if len(filter_ors) > 0:
                 query = query.filter(text('(' + (' OR '.join(filter_ors)) + ')'))
             count = query.count()
-            if offset < count:
+            if count > 0 and offset < count:
                 query = query.order_by(order).offset(offset)
                 if limit > 0:
                     query = query.limit(limit)

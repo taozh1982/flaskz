@@ -13,8 +13,12 @@
 
 ## 版本
 
+- **1.2** `2023/02/01`
+    - [A] 添加`FLASKZ_DATABASE_POOL_PRE_PING`参数，用于设置engine的`pool_pre_ping`参数
+    - [A] `init_model`函数添加数据库连接异常处理和重新连接
+    - [C] `init_model_rest_blueprint`函数生成的删除路由URL中的id参数添加`path`类型转换
 - **1.1** `2023/01/01`
-    - [F] 修复BaseModelMixin的`update_db`和`delete_db`方法在非flask应用或没有flask应用上下文时的操作失败问题
+    - [F] 修复`BaseModelMixin`的`update_db`和`delete_db`方法在非flask应用或没有flask应用上下文时的操作失败问题
 - **1.0** `2022/12/01`
     - [A] 添加`flask.utils.set_timeout`和`flask.utils.set_interval`函数用于延迟和周期性函数执行
     - [A] `flask.ext.ssh`添加`timeout`参数以设置超时时间(登录&命令执行)

@@ -2,7 +2,7 @@ from collections.abc import Mapping
 
 __all__ = [
     'filter_list', 'find_list', 'merge_list', 'each_list', 'get_list',
-    'get_dict', 'del_dict_keys', 'get_deep', 'set_deep', 'merge_dict', 'get_ins_mapping', 'get_dict_mapping',
+    'get_dict', 'del_dict_keys', 'get_deep', 'set_deep', 'merge_dict', 'get_ins_mapping', 'get_dict_mapping', 'get_dict_value_by_type',
     'is_list', 'is_dict', 'slice_str',
     'get_wrap_str', 'is_str',
     'bulk_append_child'
@@ -226,12 +226,39 @@ def merge_dict(dct, *merged_dict_list):
     :return: None
     """
     for dict_item in merged_dict_list:
-        for k, v in dict_item.items(): # #2022-04-22 dict_item.iteritems-->dict_item.items
+        for k, v in dict_item.items():  # #2022-04-22 dict_item.iteritems-->dict_item.items
             if (k in dct and isinstance(dct[k], dict)
                     and isinstance(dict_item[k], Mapping)):
                 merge_dict(dct[k], dict_item[k])
             else:
                 dct[k] = dict_item[k]
+
+
+def get_dict_value_by_type(obj, key, value_type, default=None, by_instance=False):
+    """
+    Get the dict value of the specified key, if value is not the instance of the specified type, return default value.
+
+    .. versionadded:: 1.2
+
+    :param obj:
+    :param key:
+    :param value_type:
+    :param default:
+    :param by_instance:
+    :return:
+    """
+    if key not in obj:
+        return default
+    value = obj.get(key)
+    if by_instance is True:
+        if value_type is int and (value is True or value is False):  # instance(True,input) == True
+            return default
+        if isinstance(value, value_type):
+            return value
+    else:
+        if type(value) is value_type:
+            return value
+    return default
 
 
 # -------------------------------------------type-------------------------------------------

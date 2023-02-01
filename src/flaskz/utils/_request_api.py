@@ -10,7 +10,7 @@ import requests
 from flask import request
 from requests import Session
 
-from ._common import is_dict, slice_str
+from ._common import is_dict
 from .. import res_status_codes
 from ..log import flaskz_logger
 

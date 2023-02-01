@@ -52,7 +52,7 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
             return create_response(success, res_data)
 
     if 'delete' in routers:
-        @api_blueprint.route(url_prefix + '/<did>', methods=['DELETE'])
+        @api_blueprint.route(url_prefix + '/<path:did>', methods=['DELETE'])  # @2023-01-12 add 'path' converter type
         @rest_permission_required(module, 'delete')
         @gen_route_method('delete', url_prefix)
         def delete(did):

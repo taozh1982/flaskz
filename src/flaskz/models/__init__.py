@@ -1,9 +1,11 @@
 import sqlite3
 import time
+from datetime import datetime
 
 from flask import Flask
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
+from sqlalchemy.engine import ExceptionContext
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -37,17 +39,32 @@ def init_model(app):
         cursor.close()
 
     try:
-        # @2022-11-29: add, filter none config
         engine_kwargs = {}
-        for engine_key, config_key in {'echo': 'FLASKZ_DATABASE_ECHO', 'pool_recycle': 'FLASKZ_DATABASE_POOL_RECYCLE'}.items():
+        for engine_key, config_key in {'echo': 'FLASKZ_DATABASE_ECHO',
+                                       'pool_recycle': 'FLASKZ_DATABASE_POOL_RECYCLE',
+                                       'pool_pre_ping': 'FLASKZ_DATABASE_POOL_PRE_PING'}.items():  # @2023-02-01: add pool_pre_ping config
             if config_key in app_config:
                 engine_kwargs[engine_key] = app_config.get(config_key)
         engine = create_engine(database_uri, **engine_kwargs)
-        # engine = create_engine(database_uri, echo=app_config.get('FLASKZ_DATABASE_ECHO'), pool_recycle=app_config.get('FLASKZ_DATABASE_POOL_RECYCLE'))
-        # Session.configure(bind=engine)
         DBSession.configure(binds={ModelBase: engine})  # for multiple db
+
         with engine.connect():  # connect test
             flaskz_logger.info('Database ' + database_uri + ' is ready\n')
+
+        # handle disconnect error
+        engine_err_info = {}
+
+        @event.listens_for(engine, "handle_error")
+        def handle_engine_error(context: ExceptionContext):  # @2023-02-01: add error handler
+            flaskz_logger.error('Engine error:\n' + str(context.original_exception))
+            if engine_kwargs.get('pool_pre_ping') is not True:
+                if not context.connection or context.sqlalchemy_exception.connection_invalidated:
+                    now = datetime.now().timestamp()
+                    last_connect_time = engine_err_info.get('connect_time')
+                    if last_connect_time is None or now - last_connect_time > 1:  # interval >1s
+                        engine_err_info['connect_time'] = now
+                        engine.connect()  # reconnect
+
     except Exception as e:
         flaskz_logger.exception('Connect to database ' + database_uri + ' error\n')
         return

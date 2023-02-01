@@ -36,6 +36,7 @@ class ModelMixin(BaseModelMixin):
     def after_add(cls, data, instance, before_result):
         """
         The callback after adding data.
+        If an exception occurs in after_add, the added data will not be rolled back.
 
         :param data: The data to be added
         :param instance: The result model instance, None if add fails.
@@ -101,6 +102,7 @@ class ModelMixin(BaseModelMixin):
     def after_update(cls, data, instance, before_result):
         """
         The callback after updating data.
+        If an exception occurs in after_update, the updated data will not be rolled back.
 
         :param data:
         :param instance:
@@ -166,6 +168,7 @@ class ModelMixin(BaseModelMixin):
     def after_delete(cls, pk_value, instance, before_result):
         """
         The callback after deleting data.
+        If an exception occurs in after_delete, the data will still be deleted.
 
         :param pk_value:
         :param instance:
