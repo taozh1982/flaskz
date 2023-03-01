@@ -26,6 +26,20 @@ class BaseModelMixin:
         return cls.__table__.columns
 
     @classmethod
+    def get_columns_fields(cls):
+        """
+        Get all the column fields
+
+         .. versionadded:: 1.3
+
+        :return:
+        """
+        fields = []
+        for col in cls.get_columns():
+            fields.append(cls.get_column_field(col))  # col.key
+        return fields
+
+    @classmethod
     def get_column_field(cls, col):
         """
         Get the field variable name of the column, default return the key of the column

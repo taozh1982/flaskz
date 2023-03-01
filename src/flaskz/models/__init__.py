@@ -40,11 +40,16 @@ def init_model(app):
 
     try:
         engine_kwargs = {}
+        custom_engine_kwargs = app_config.get('FLASKZ_DATABASE_ENGINE_KWARGS')  # @2023-02-27: add FLASKZ_DATABASE_ENGINE_KWARGS config
+        if type(custom_engine_kwargs) is dict:
+            engine_kwargs.update(custom_engine_kwargs)
+
         for engine_key, config_key in {'echo': 'FLASKZ_DATABASE_ECHO',
                                        'pool_recycle': 'FLASKZ_DATABASE_POOL_RECYCLE',
                                        'pool_pre_ping': 'FLASKZ_DATABASE_POOL_PRE_PING'}.items():  # @2023-02-01: add pool_pre_ping config
             if config_key in app_config:
                 engine_kwargs[engine_key] = app_config.get(config_key)
+
         engine = create_engine(database_uri, **engine_kwargs)
         DBSession.configure(binds={ModelBase: engine})  # for multiple db
 

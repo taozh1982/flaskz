@@ -3,7 +3,7 @@ from sqlalchemy import desc, asc
 
 from ._common import get_dict, is_str, is_dict
 
-__all__ = ['get_remote_addr', 'is_ajax', 'get_pss']
+__all__ = ['get_remote_addr', 'is_ajax', 'get_request_json', 'get_pss']
 
 
 def get_remote_addr():
@@ -20,6 +20,26 @@ def is_ajax():
     :return:
     """
     return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+
+def get_request_json(*args):
+    """
+    Get the JSON data(parsed) in request
+    If json does not exist or parsing json error, return {}
+
+    .. versionadded:: 1.3
+
+    :return:
+    """
+    data = None
+    try:
+        data = request.get_json(force=True, silent=True)
+    except Exception:
+        pass
+    if data is None:
+        if len(args) > 0:
+            return args[0]
+    return data
 
 
 def get_pss(cls, pss_config=None):
@@ -49,18 +69,19 @@ def get_pss(cls, pss_config=None):
                     col_field = cls.get_column_field(col)
                 likes.append(col_field + " like '%" + search_like + "%'")
 
+    columns_fields = cls.get_columns_fields()
     _ands = search.pop('_ands', None)
     if _ands:
         for key in _ands:
-            _append_item(ands, key, _ands[key])
+            _append_item(ands, key, _ands[key], columns_fields)
 
     _ors = search.pop('_ors', None)
     if _ors:
         for key in _ors:
-            _append_item(ors, key, _ors[key])
+            _append_item(ors, key, _ors[key], columns_fields)
 
     for key in search:
-        _append_item(ands, key, search[key])
+        _append_item(ands, key, search[key], columns_fields)
     # --------------------page--------------------
     offset = page.get('offset') or page.get('skip') or 0
     limit = page.get('limit') or page.get('size') or 100000
@@ -111,7 +132,10 @@ def get_pss(cls, pss_config=None):
     }
 
 
-def _append_item(items, key, value):
+def _append_item(items, key, value, columns_fields):  # @2023-02-06 add columns_fields args to fix "Unknown column 'col' in 'where clause'"
+    if columns_fields and (key not in columns_fields):
+        return items
+
     if value is not None:
         if is_str(value):
             value = value.strip()

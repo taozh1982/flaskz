@@ -1,6 +1,7 @@
 import json
 
 from flask import request
+from flaskz import res_status_codes
 
 from ..log import flaskz_logger, get_log_data
 from ..models import model_to_dict, query_multiple_model, ModelMixin
@@ -12,7 +13,7 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
     Append rest api route to the api blueprint for the specified model class.
     :param to_json_option: The option used to return json, fields/cascade. ex){'cascade': 1}
     :param module: The module name,ex) role/menu
-    :param url_prefix: Api url
+    :param url_prefix: Api url path
     :param api_blueprint:
     :param model_cls: The specified model class.
     :param routers: The api router list, ex)['query', 'query_pss', 'add', 'update', 'delete']
@@ -52,10 +53,10 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
             return create_response(success, res_data)
 
     if 'delete' in routers:
-        @api_blueprint.route(url_prefix + '/<path:did>', methods=['DELETE'])  # @2023-01-12 add 'path' converter type
+        @api_blueprint.route(url_prefix + '/<path:did>/', methods=['DELETE'])
         @rest_permission_required(module, 'delete')
         @gen_route_method('delete', url_prefix)
-        def delete(did):
+        def delete(did):  # @2023-01-12 add 'path' converter type，@2023-02-07 add '/' to the end to fix request issues ending with /
             """
             delete model data by id
             :return:
@@ -71,14 +72,18 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
 
     if 'update' in routers:
         @api_blueprint.route(url_prefix + '/', methods=['PATCH'])
+        @api_blueprint.route(url_prefix + '/<path:did>/', methods=['PATCH'])  # @2023-02-14 add primary key
         @rest_permission_required(module, 'update')
         @gen_route_method('update', url_prefix)
-        def update():
+        def update(did=None):
             """
             Update the model data by the json.
+            The priority of the primary key in the url is higher than that in the body.
             :return:
             """
             request_json = request.json
+            if did is not None:
+                request_json[model_cls.get_primary_field()] = did  # use pk in url
             req_log_data = json.dumps(request_json)
 
             success, data = model_cls.update(request_json)
@@ -129,17 +134,30 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
 
     if 'query' in routers:
         @api_blueprint.route(url_prefix + '/', methods=['GET'])
+        @api_blueprint.route(url_prefix + '/<path:did>/', methods=['GET'])  # @2023-02-13 add query by primary key
         @rest_permission_required(module)
         @gen_route_method('query', url_prefix)
-        def query():
+        def query(did=None):
             """
-            Query all the model data
+            Query all the model data or specified data.
+            if primary key is None, return all the data.
             :return:
             """
-            success, data = model_cls.query_all()
-            res_data = model_to_dict(data, to_json_option)
+            if did is None:
+                success, data = model_cls.query_all()
+            else:
+                try:
+                    data = model_cls.query_by_pk(did)
+                    if data:
+                        success, data = True, data
+                    else:
+                        success, data = False, res_status_codes.db_data_not_found
+                except Exception as e:
+                    flaskz_logger.exception(e)
+                    success, data = False, res_status_codes.db_query_err
 
-            flaskz_logger.debug(get_rest_log_msg('Query all {} data'.format(class_name), None, success, res_data))
+            res_data = model_to_dict(data, to_json_option)
+            flaskz_logger.debug(get_rest_log_msg('Query {} data'.format(class_name), did, success, res_data))
             return create_response(success, res_data)
 
     if 'query_pss' in routers:
@@ -174,6 +192,7 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
                 'roles': {
                     'model_cls': Role,
                     'option': {
+                        # 'cascade': 1,
                         'includes': ['id', 'name']
                     }
                 }
