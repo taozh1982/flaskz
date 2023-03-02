@@ -53,10 +53,10 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
             return create_response(success, res_data)
 
     if 'delete' in routers:
-        @api_blueprint.route(url_prefix + '/<path:did>/', methods=['DELETE'])
+        @api_blueprint.route(url_prefix + '/<did>/', methods=['DELETE'])
         @rest_permission_required(module, 'delete')
         @gen_route_method('delete', url_prefix)
-        def delete(did):  # @2023-01-12 add 'path' converter type，@2023-02-07 add '/' to the end to fix request issues ending with /
+        def delete(did):  # @2023-01-12 add 'path' converter type，@2023-02-07 add '/' to the end to fix request issues ending with /, @2023-03-02 remove path converter
             """
             delete model data by id
             :return:
@@ -72,7 +72,7 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
 
     if 'update' in routers:
         @api_blueprint.route(url_prefix + '/', methods=['PATCH'])
-        @api_blueprint.route(url_prefix + '/<path:did>/', methods=['PATCH'])  # @2023-02-14 add primary key
+        @api_blueprint.route(url_prefix + '/<did>/', methods=['PATCH'])  # @2023-02-14 add primary key, @2023-03-02 remove path converter
         @rest_permission_required(module, 'update')
         @gen_route_method('update', url_prefix)
         def update(did=None):
@@ -134,7 +134,7 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
 
     if 'query' in routers:
         @api_blueprint.route(url_prefix + '/', methods=['GET'])
-        @api_blueprint.route(url_prefix + '/<path:did>/', methods=['GET'])  # @2023-02-13 add query by primary key
+        @api_blueprint.route(url_prefix + '/<did>/', methods=['GET'])  # @2023-02-13 add query by primary key, @2023-03-02 remove path converter
         @rest_permission_required(module)
         @gen_route_method('query', url_prefix)
         def query(did=None):

@@ -13,6 +13,8 @@
 
 ## 版本
 
+- **1.3.1** `2023/03/02`
+    - [C] `init_model_rest_blueprint`函数生成的路由, 移除参数`path`类型转换, 以解决<2.2.3版本的Flask不会将结尾不带`/`的请求重定向到带`/`路由的问题
 - **1.3** `2023/03/01`
     - [A] `init_model_rest_blueprint`函数生成的query路由, 添加对单个数据的查询功能(`[GET]url_prefix/did/`)
     - [A] `init_model_rest_blueprint`函数生成的update路由, 添加URL主键支持(`[PATCH]url_prefix/did/`)
@@ -21,7 +23,7 @@
 - **1.2** `2023/02/01`
     - [A] 添加`FLASKZ_DATABASE_POOL_PRE_PING`参数, 用于设置engine的`pool_pre_ping`参数
     - [A] `init_model`函数添加数据库连接异常处理和重新连接
-    - [C] `init_model_rest_blueprint`函数生成的删除路由URL中的id参数添加`path`类型转换
+    - ~~[C] `init_model_rest_blueprint`函数生成的删除路由URL中的id参数添加`path`类型转换(已移除)~~
 - **1.1** `2023/01/01`
     - [F] 修复`BaseModelMixin`的`update_db`和`delete_db`方法在非flask应用或没有flask应用上下文时的操作失败问题
 - **1.0** `2022/12/01`
