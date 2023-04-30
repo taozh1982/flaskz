@@ -35,7 +35,10 @@ def _get_request_kwargs(kwargs):
 
 def api_request(url, method="GET", url_params=None, base_url="", raw_response=False, **kwargs):
     """
-    Request an api
+    Request an api.
+
+    Example
+        api_request('ELASTICSEARCH_URI', url_params={'index': index}, json=query, timeout=10)
 
     :param url:
     :param method:
@@ -90,7 +93,17 @@ def api_request(url, method="GET", url_params=None, base_url="", raw_response=Fa
 
 def forward_request(url, payload=None, raw_response=False, error_code=500, **kwargs):
     """
-    Forward the request to other service
+    Forward the request to other service.
+
+    Example:
+        @api_bp.route('/<regex(".*"):path>/', methods=HTTP_METHODS)
+        def remote(path):
+            remote_res = forward_request(base_url + path)
+            res = make_response(remote_res[0], remote_res[1])
+            for k, v in remote_res[2]:
+                if k not in ['Transfer-Encoding']:
+                    res.headers[k] = v
+            return res
 
     :param error_code:
     :param payload:
@@ -127,10 +140,11 @@ def append_url_search_params(url, params):  # @2022-05-09: add
     """
     Appends a specified key/value pair as a new search parameter.
 
-    append_url_search_params('https://example.com',{'foo':1,'bar':2}) --> 'https://example.com?foo=1&bar=2' # append
-    append_url_search_params('https://example.com?foo=1&bar=2',{'baz':3}) --> 'https://example.com?foo=1&bar=2&baz=3' # append
-    append_url_search_params('https://example.com?foo=1&bar=2',{'bar':3}) --> 'https://example.com?foo=1&bar=3' # replace
-    append_url_search_params('a/b',{'c':3}) --> 'a/b?c=3'
+    Example:
+        append_url_search_params('https://example.com',{'foo':1,'bar':2}) --> 'https://example.com?foo=1&bar=2' # append
+        append_url_search_params('https://example.com?foo=1&bar=2',{'baz':3}) --> 'https://example.com?foo=1&bar=2&baz=3' # append
+        append_url_search_params('https://example.com?foo=1&bar=2',{'bar':3}) --> 'https://example.com?foo=1&bar=3' # replace
+        append_url_search_params('a/b',{'c':3}) --> 'a/b?c=3'
 
     :param url:
     :param params:

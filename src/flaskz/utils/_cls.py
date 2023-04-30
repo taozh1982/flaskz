@@ -1,6 +1,6 @@
 from inspect import isfunction
 
-__all__ = ['Attribute', 'ins_to_dict']
+__all__ = ['Attribute', 'cls_to_dict', 'ins_to_dict']
 
 
 class Attribute:
@@ -28,10 +28,45 @@ class Attribute:
         return 'Attribute(' + ", ".join(t) + ')'
 
 
+def cls_to_dict(cls, option=None):  # @2023-03-15 add, convert class(config) to dictionary
+    """
+    Convert class(config) to dictionary.
+
+     .. versionadded:: 1.5
+
+     Example:
+         cls_to_dict(Config)
+         cls_to_dict(TestConfig)
+
+    :param cls:
+    :param option:
+    :return:
+    """
+    if option is None:
+        option = {}
+    attr_filter = _get_option_filter(option)
+
+    props = {}
+    cls_dir = dir(cls.__class__)
+    for key in dir(cls):
+        if key.startswith('__') or key in cls_dir:
+            continue
+        if _filter_attr(cls, key, attr_filter) is False:
+            continue
+
+        value = getattr(cls, key)
+        if callable(value):
+            continue
+        props[key] = value
+
+    return props
+
+
 def ins_to_dict(ins, option=None):
     """
-    Convert instance object to dictionary
-    ex)
+    Convert instance object to dictionary.
+
+    Example:
     ins_to_dict(A, {
         'cascade': 3,  # 如果子项没有cascade，则使用父项-1，如果cascade不大于0，则不对象属性
         'recursion_value': '{...}'
@@ -58,6 +93,7 @@ def ins_to_dict(ins, option=None):
         #     'exclude': ['x2']
         # }
     })
+
     :param ins:
     :param option:
     :return:
@@ -108,33 +144,11 @@ def _ins_to_dict(ins, option=None, path_items=None, path_keys=None):
     else:
         attrs = ins.__dict__
 
-    item_include = item_option.get('include', [])
-    item_exclude = item_option.get('exclude', [])
-
-    if isfunction(item_include):
-        has_item_include = 'func'
-    else:
-        has_item_include = len(item_include) > 0
-
-    if isfunction(item_exclude):
-        has_item_exclude = 'func'
-    else:
-        has_item_exclude = len(item_exclude) > 0
-
-    result = {}
-
     # with_none_value = item_option.get('with_none_value', False)
-
+    attr_filter = _get_option_filter(item_option)
+    result = {}
     for key, value in attrs.items():
-
-        if has_item_include is True and key not in item_include:
-            continue
-        elif has_item_include == "func" and item_include(ins, key) is not True:
-            continue
-
-        if has_item_exclude is True and key in item_exclude:
-            continue
-        elif has_item_exclude == "func" and item_exclude(ins, key) is True:
+        if _filter_attr(ins, key, attr_filter) is False:
             continue
 
         _value = None
@@ -182,3 +196,43 @@ def _get_option_key(option, key_list, key):
         if key in item_option:
             return item_option.get(key)
     return _get_option_key(option, key_list[:-1], key)
+
+
+def _get_option_filter(option):
+    include = option.get('include', [])
+    exclude = option.get('exclude', [])
+
+    if isfunction(include):
+        has_include = 'func'
+    else:
+        has_include = len(include) > 0
+
+    if isfunction(exclude):
+        has_exclude = 'func'
+    else:
+        has_exclude = len(exclude) > 0
+    return {
+        'include': include,
+        'has_include': has_include,
+        'exclude': exclude,
+        'has_exclude': has_exclude,
+    }
+
+
+def _filter_attr(obj, attr, attr_filter):
+    has_include = attr_filter.get('has_include')
+    include = attr_filter.get('include')
+    has_exclude = attr_filter.get('has_exclude')
+    exclude = attr_filter.get('exclude')
+
+    if has_include is True and attr not in include:
+        return False
+    elif has_include == "func" and include(obj, attr) is not True:
+        return False
+
+    if has_exclude is True and attr in exclude:
+        return False
+    elif has_exclude == "func" and exclude(obj, attr) is True:
+        return False
+
+    return True

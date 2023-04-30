@@ -42,17 +42,18 @@ def set_interval(interval, function, args=None, kwargs=None, immediately=False, 
     Execute a function periodically at a specified time interval(milliseconds).
     The result of the function execution is False, then the loop is interrupted.
 
+    .. versionadded:: 1.0
+
+    Example:
         t = set_interval(10, print, ('Hello, World!',))
         # t.cancel()    # Stop the timer
 
-    .. versionadded:: 1.0
-
-    :param daemon: if true, the timer will be daemon(Daemon threads are abruptly stopped at shutdown)
     :param interval: time interval in milliseconds
     :param function: callback function, which should do exception catching*
     :param args:
     :param kwargs:
     :param immediately: If True, the function will be executed immediately, otherwise it will be executed after the interval time
+    :param daemon: if true, the timer will be daemon(Daemon threads are abruptly stopped at shutdown)
     :return:
     """
     t = _IntervalTimer(interval, function, args=args, kwargs=kwargs, immediately=immediately, daemon=daemon)
@@ -63,16 +64,17 @@ def set_timeout(interval, function, args=None, kwargs=None, daemon=True):
     """
     Set a timer which executes a function once the timer expires(milliseconds).
 
+     .. versionadded:: 1.0
+
+    Example:
         t = set_timeout(10, print, ('Hello, World!',))
         # t.cancel()    # Stop the timer
 
-     .. versionadded:: 1.0
-
-    :param daemon: if true, the timer will be daemon(Daemon threads are abruptly stopped at shutdown)
     :param interval: delay time in milliseconds before the specified function is executed
     :param function:
     :param args:
     :param kwargs:
+    :param daemon: if true, the timer will be daemon(Daemon threads are abruptly stopped at shutdown)
     :return:
     """
     t = Timer(interval / 1000, function, args=args, kwargs=kwargs)

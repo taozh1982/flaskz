@@ -27,6 +27,7 @@ class ModelMixin(BaseModelMixin):
         """
         The callback before adding data.
         If the return value is not True, the adding process will be terminated and the result will be returned to the client.
+
         :param data: The data to be added
         :return: True|Error Message
         """
@@ -145,8 +146,8 @@ class ModelMixin(BaseModelMixin):
     @classmethod
     def get_delete_data(cls, pk_value):
         """
-        Return the primary key of the data to be deleted. By default, return the primary key of the client data
-        Rewrite to customize the deleted data
+        Return the primary key of the data to be deleted. By default, return the primary key of the client data.
+        Rewrite to customize the deleted data.
 
         :param pk_value: The primary key of the data to be deleted
         :return:
@@ -217,8 +218,9 @@ class ModelMixin(BaseModelMixin):
     @classmethod
     def query_all(cls):
         """
-        Override the base query_all method and return success flag
-        Used in router to return query data
+        Override the base query_all method and return success flag.
+        Used in router to return query data.
+
         :return:
         """
         try:
@@ -230,8 +232,9 @@ class ModelMixin(BaseModelMixin):
     @classmethod
     def query_pss(cls, pss_option):
         """
-        Override the base query_pss method and return success flag
-        Used in router to return query data
+        Override the base query_pss method and return success flag.
+        Used in router to return query data.
+
         :param pss_option:
         :return:
         """

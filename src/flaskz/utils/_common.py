@@ -4,7 +4,7 @@ __all__ = [
     'filter_list', 'find_list', 'merge_list', 'each_list', 'get_list',
     'get_dict', 'del_dict_keys', 'get_deep', 'set_deep', 'merge_dict', 'get_ins_mapping', 'get_dict_mapping', 'get_dict_value_by_type',
     'is_list', 'is_dict', 'slice_str',
-    'get_wrap_str', 'is_str',
+    'get_wrap_str', 'is_str', 'str_replace',
     'bulk_append_child'
 ]
 
@@ -217,21 +217,26 @@ def get_dict_mapping(dict_list, key='id', key_join="+"):
 
 
 def merge_dict(dct, *merged_dict_list):
-    """ Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
+    """
+    Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
     updating only top-level keys, dict_merge recurses down into dicts nested
     to an arbitrary depth, updating keys. The ``merge_dct`` is merged into
     ``dct``.
+
+    .. versionupdated:: 1.5 - return dct
+
     :param dct: dict onto which the merge is executed
     :param merged_dict_list: dct merged into dct
-    :return: None
+    :return: dct
     """
     for dict_item in merged_dict_list:
-        for k, v in dict_item.items():  # #2022-04-22 dict_item.iteritems-->dict_item.items
+        for k, v in dict_item.items():  # 2022-04-22 dict_item.iteritems-->dict_item.items
             if (k in dct and isinstance(dct[k], dict)
                     and isinstance(dict_item[k], Mapping)):
                 merge_dict(dct[k], dict_item[k])
             else:
                 dct[k] = dict_item[k]
+    return dct  # @2023-04-12 add result
 
 
 def get_dict_value_by_type(obj, key, value_type, default=None, by_instance=False):
@@ -264,7 +269,8 @@ def get_dict_value_by_type(obj, key, value_type, default=None, by_instance=False
 # -------------------------------------------type-------------------------------------------
 def is_str(value, by_instance=False):
     """
-    Check whether the value is string
+    Check whether the value is string.
+
     :param value:
     :param by_instance:
     :return:
@@ -276,7 +282,8 @@ def is_str(value, by_instance=False):
 
 def is_list(value, by_instance=False):
     """
-    Check whether the value is list object
+    Check whether the value is list object.
+
     :param value:
     :param by_instance:
     :return:
@@ -288,7 +295,8 @@ def is_list(value, by_instance=False):
 
 def is_dict(value, by_instance=False):
     """
-    Check whether the value is dict object
+    Check whether the value is dict object.
+
     :param value:
     :param by_instance:
     :return:
@@ -301,7 +309,8 @@ def is_dict(value, by_instance=False):
 # -------------------------------------------str-------------------------------------------
 def get_wrap_str(*items):
     """
-    Use '\n' to join multiple strings
+    Use '\n' to join multiple strings.
+
     :param items:
     :return:
     """
@@ -325,11 +334,42 @@ def slice_str(value, start_len=6, end_len=0, ellipsis_str='......'):
     return result
 
 
+def str_replace(txt, old, new=''):
+    """
+    Return a copy with all occurrences of substring old replaced by new.
+
+    .. versionadded:: 1.5
+
+    Example:
+        str_replace('abca','a','A')             # AbcA
+        str_replace('abca',{'a':'A','b':'B'})   # ABcA
+        str_replace('abca',['a','b'],"*")       # **c*
+
+    :param txt:
+    :param old:
+    :param new:
+    :return:
+    """
+    v_type = type(old)
+    if v_type is dict:
+        for key in old:
+            txt = txt.replace(key, old[key])
+    elif v_type is list:
+        for item in old:
+            txt = txt.replace(item, new)
+    else:
+        txt = txt.replace(old, new)
+    return txt
+
+
 # -------------------------------------------other-------------------------------------------
 def bulk_append_child(items, parent_map, item_parent_key='parent_id', children_key="children", parent_map_key='id'):
     """
-    Append the items to the child list of the matched parent object
-    bulk_append_child(interface_items,device_list, 'device_id', 'interface_list')
+    Append the items to the child list of the matched parent object.
+
+    Example:
+        bulk_append_child(interface_items,device_list, 'device_id', 'interface_list')
+
     :param items:
     :param item_parent_key:
     :param parent_map:

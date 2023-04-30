@@ -19,8 +19,7 @@ def get_current_model_rest_manager_callback(callback_name):
 
 def rest_login_required():
     """
-     If you decorate a view with this, it will ensure that the current user is
-    logged in and authenticated before calling the actual view.
+    If you decorate a view with this, it will ensure that the current user is logged in and authenticated before calling the actual view.
 
     @sys_mgmt_bp.route('/auth/account/', methods=['GET', 'POST'])
     @rest_login_required()
@@ -48,7 +47,7 @@ def rest_login_required():
 
 def rest_permission_required(module, op_permission=None):
     """
-    If you decorate a view with this, it will ensure that the current user
+    If you decorate a view with this, it will ensure that the current user.
     has the module permission and operation permission before calling the actual view.
 
     @sys_mgmt_bp.route('/role/', methods=['GET'])
@@ -85,6 +84,7 @@ def rest_permission_required(module, op_permission=None):
 def get_rest_log_msg(api_info, req_data, success, res_data):
     """
     Return the log message text.
+
     :param api_info:
     :param req_data:
     :param success:
@@ -100,7 +100,11 @@ def get_rest_log_msg(api_info, req_data, success, res_data):
 
 def log_operation(*args, **kwargs):
     """
-    Log operation
+    Log operation/action.
+
+    Example:
+        log_operation('users', 'login', success, request_json.get('username'), res_data)
+
     :param args:
     :param kwargs:
     :return:
@@ -112,7 +116,7 @@ def log_operation(*args, **kwargs):
 
 def gen_route_method(method, url_prefix):
     """
-    Generate endpoint unique function name
+    Generate endpoint unique function name.
     :param method:
     :param url_prefix:
     :return:
@@ -124,8 +128,8 @@ def gen_route_method(method, url_prefix):
 
         methods = url_prefix.split('/')
         methods.append(method)
-        methods.insert(0, 'model_rest')
-        wrap.__name__ = '_'.join(filter_list(methods, lambda item: item != ''))
+        methods.insert(0, 'model_route')
+        wrap.__name__ = '_'.join(filter_list(methods, lambda item: item != '')).replace('-', '_')
         return wrap
 
     return decorator

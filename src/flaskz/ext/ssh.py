@@ -18,8 +18,12 @@ from paramiko.util import retry_on_signal
 @contextmanager
 def ssh_session(hostname, username, password=None, port=22, **kwargs):
     """
-    with ssh_session(host, username, password, timeout=20) as ssh:
-        ssh.run_command("ls -l")
+    SSH contextmanager.
+
+    Example:
+        with ssh_session(host, username, password, timeout=20) as ssh:
+            ssh.run_command("ls -l")
+
     """
     ssh_client = SSH(hostname=hostname, username=username, password=password, port=port, **kwargs)
     yield ssh_client
@@ -29,7 +33,10 @@ def ssh_session(hostname, username, password=None, port=22, **kwargs):
 class SSH(object):
     def __init__(self, hostname, username, password=None, port=22, **kwargs):
         """
-        ssh = SSH(host, username, password, timeout=20)
+        Create a SSH instance.
+
+        Example:
+            ssh = SSH(host, username, password, timeout=20)
         """
         self._username = username
         self._password = password
@@ -59,16 +66,18 @@ class SSH(object):
 
     def run_command(self, command):
         """
-        Run the command
-        ssh.run_command("ls -l")
+        Run the command.
+
+        Example:
+            ssh.run_command("ls -l")
         """
         command = command.strip()
         self.channel.send(command + '\n')
         output = self._get_output(command)
 
         if self._password and command.lower().startswith('sudo') and 'assword' in output:  # input password
-            pwd_ouput = self.run_command(self._password)
-            if 'assword' in pwd_ouput:
+            pwd_output = self.run_command(self._password)
+            if 'assword' in pwd_output:
                 return output
             return self.run_command(command)
 
@@ -76,9 +85,11 @@ class SSH(object):
 
     def run_command_list(self, command_list, last_result=False):
         """
-        Run a command list
+        Run a command list.
         By default, returns the list of results , if last_result==True returns the result of the last command
-        ssh.run_command_list(['cd /usr/projects/git/srte',
+
+        Example:
+            ssh.run_command_list(['cd /usr/projects/git/srte',
                       'pwd',
                       'git pull origin master',
                       'wiui@hotmail.com',
@@ -94,9 +105,11 @@ class SSH(object):
 
     def sftp_get_dir(self, remote_dir, local_dir):
         """
-        Download remote direction to local
-        Return the local files list
-        ssh.sftp_get_dir("/usr/projects/git/srte/src/", "/Users/taozh/Work/Codes/ssh_test/sftp")
+        Download remote direction to local.
+        Return the local files list.
+
+        Example:
+            ssh.sftp_get_dir("/usr/projects/git/srte/src/", "/Users/taozh/Work/Codes/ssh_test/sftp")
         """
         if not self._path_exists(remote_dir):
             return False
@@ -117,8 +130,10 @@ class SSH(object):
 
     def listdir(self, path, recursion=False):
         """
-        List all files in the given path
-        ssh.listdir("/usr/projects/git/srte/src/")
+        List all files in the given path.
+
+        Example:
+            ssh.listdir("/usr/projects/git/srte/src/")
         """
         all_files = []
         path = _remove_end_slash(path)
@@ -176,17 +191,16 @@ class SSH(object):
 
 def _create_socket(hostname, port, timeout=0):
     """
-    Create socket instance
+    Create socket instance.
     If timeout>0, set the timeout of the instance, otherwise use the default timeout(maybe 75s).
+
     :param hostname:
     :param port:
     :param timeout:
     :return:
     """
     reason = "No suitable address family"
-    addrinfos = socket.getaddrinfo(
-        hostname, port, socket.AF_UNSPEC, socket.SOCK_STREAM
-    )
+    addrinfos = socket.getaddrinfo(hostname, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
     for family, socktype, proto, canonname, sockaddr in addrinfos:
         if socktype == socket.SOCK_STREAM:
             sock = socket.socket(family, socket.SOCK_STREAM)
@@ -209,7 +223,7 @@ def _create_socket(hostname, port, timeout=0):
 
 def _clear_redundant(txt, command):
     """
-    Clear the redundant information
+    Clear the redundant information.
     - Welcome info      ex)Welcome to Ubuntu...
     - Last login info   ex)Last login...
     - Path info         ex)[root@localhost ~]...

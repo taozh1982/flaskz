@@ -17,10 +17,7 @@ def init_log(app):
     :param app:
     :return:
     """
-    if isinstance(app, Flask):
-        app_config = app.config
-    else:
-        app_config = app
+    app_config = get_app_config_items(app) or {}
     level = logging.getLevelName(app_config.get('FLASKZ_LOGGER_LEVEL'))
     formatter = logging.Formatter(app_config.get('FLASKZ_LOGGER_FORMAT'))
     global _flaskz_logger
@@ -65,3 +62,6 @@ def get_log_data(data):
 def _log_data_converter(value):
     if isinstance(value, datetime.datetime):
         return value.__str__()
+
+
+from ..utils import get_app_config_items

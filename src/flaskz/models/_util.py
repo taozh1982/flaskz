@@ -7,7 +7,7 @@ from ._base import BaseModelMixin
 from ..utils import get_g_cache, set_g_cache
 
 __all__ = ['create_instance', 'create_relationships',
-           'query_multiple_model',
+           'query_all_models', 'query_multiple_model',
            'append_debug_queries', 'get_debug_queries',
            'get_db_session', 'db_session', 'close_db_session',
            'model_to_dict',
@@ -17,7 +17,11 @@ __all__ = ['create_instance', 'create_relationships',
 
 def create_instance(model_cls, data, create_relationship=True):
     """
-    Create an instance of the specified model class with the data
+    Create an instance of the specified model class with the data.
+
+    Example:
+        create_instance(User, {"name": "taozh", "email": "taozh@focus-ui.com"})
+
     :param model_cls: The specified model class.
     :param data: The data used to create instance.
     :param create_relationship: If true, the relationships will be created.
@@ -26,7 +30,7 @@ def create_instance(model_cls, data, create_relationship=True):
     if not isinstance(data, dict):
         return None
 
-    col_value_dict = model_cls.get_columns_json(data)
+    col_value_dict = model_cls.filter_attrs_by_columns(data)
     instance = model_cls(**col_value_dict)
 
     if create_relationship is True:
@@ -38,7 +42,8 @@ def create_instance(model_cls, data, create_relationship=True):
 
 def create_relationships(model_cls, data):
     """
-    Create the relationship dict of the specified model class with the data
+    Create the relationship dict of the specified model class with the data.
+
     :param model_cls:
     :param data:
     :return:
@@ -63,15 +68,21 @@ def create_relationships(model_cls, data):
     return relationship_map
 
 
-def query_multiple_model(*cls_list):
+def query_all_models(*models):
     """
-    Query all the data of the multiple specified model class.
-    :param cls_list:
-    :return:If failed, returns the failed tuple, otherwise, returns the the data list.
+    Query all the data of the specified model list.
+
+    .. versionadded:: 1.5
+
+    Example:
+        result = query_all_models(User, Role)
+
+    :param models:
+    :return:
     """
     result = []
-    for cls in cls_list:
-        r = cls.query_all()
+    for model in models:
+        r = model.query_all()
 
         if type(r) is tuple:  # ModelMixin
             if r[0] is not True:  # error
@@ -81,6 +92,20 @@ def query_multiple_model(*cls_list):
         else:
             result.append(r)
     return result
+
+
+def query_multiple_model(*cls_list):
+    """
+    Query all the data of the multiple specified model class.
+
+    Example:
+        result = query_multiple_model(User, Role)
+
+    :param cls_list:
+    :return:If failed, returns the failed tuple, otherwise, returns the the data list.
+    """
+
+    return query_all_models(*cls_list)
 
 
 def append_debug_queries(query):
@@ -106,8 +131,9 @@ def _has_g_context():
 
 def get_db_session():
     """
-    Get the db session from g.
+    Get the db session from g(flask)/ Create a db session.
     If not exist, create a session and return.
+
     :return:
     """
     if _has_g_context():  # @2022-07-26 add, make sure work without flask request
@@ -122,7 +148,8 @@ def get_db_session():
 
 def close_db_session():
     """
-    Close the session in the g
+    Close the session in the g.
+
     :return:
     """
     if _has_g_context():  # @2022-07-26 add
@@ -136,9 +163,10 @@ def db_session(do_commit=True):
     """
     Database session context manager.
 
-    instance = create_instance(cls, json_data)
-    with db_session() as session:
-        session.add(instance)
+    Example:
+        instance = create_instance(cls, json_data)
+        with db_session() as session:
+            session.add(instance)
 
     :param do_commit: If false, session will not commit,generally used for query operations
     :return:
@@ -156,7 +184,11 @@ def db_session(do_commit=True):
 
 def model_to_dict(ins, option=None):
     """
-    Convert model data to json dict
+    Convert model data to dict.
+
+    Example:
+        result = Role.update(request_json)
+        res_data = model_to_dict(result[1], {'cascade': 1})
 
     :param ins:
     :param option:
@@ -178,7 +210,8 @@ def model_to_dict(ins, option=None):
 
 def is_model_mixin_instance(obj):
     """
-    Check if the object is an instance of the BaseModelMixin
+    Check if the object is an instance of the BaseModelMixin.
+
     :param obj:
     :return:
     """

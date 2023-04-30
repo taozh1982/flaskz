@@ -3,7 +3,7 @@ __all__ = ['get_list_args']
 
 def get_list_args(params, args):  # @2022-05-11: add
     """
-    Returns a single new list combining keys and args
+    Returns a single new list combining keys and args.
 
     def xxx(names, *args):
         print(get_list_args(names, args))

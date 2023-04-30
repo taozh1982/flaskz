@@ -16,7 +16,7 @@ __all__ = ['RSACipher', 'AESCipher']
 
 class RSACipher:
     """
-    The rsa utility class
+    The rsa utility class.
 
     The result of the encrypt and sign methods are in base64 format
     """
@@ -44,7 +44,8 @@ class RSACipher:
         """
         Encrypt data with rsa public key.
 
-        encrypt_key = RSACipher.encrypt(public_key, aes_key)
+        Example:
+            encrypt_key = RSACipher.encrypt(public_key, aes_key)
 
         :param plaintext: the data to be encrypted
         :param public_key: rsa public key
@@ -60,7 +61,8 @@ class RSACipher:
         """
         Decrypt ciphertext with rsa private key.
 
-        aes_key = RSACipher.decrypt(private_key, encrypt_key)
+        Example:
+            aes_key = RSACipher.decrypt(private_key, encrypt_key)
 
         :param ciphertext: the data to be decrypted(base64 format)
         :param private_key: rsa private key
@@ -74,9 +76,10 @@ class RSACipher:
     @staticmethod
     def sign(text, private_key):
         """
-        Sign the data with the private key
+        Sign the data with the private key.
 
-        signature = RSACipher.sign(private_key, aes_key)
+        Example:
+            signature = RSACipher.sign(private_key, aes_key)
 
         :param text: the text to be signed
         :param private_key: rsa private key
@@ -91,9 +94,10 @@ class RSACipher:
     @staticmethod
     def verify(text, signature, public_key):
         """
-        Verify the signature
+        Verify the signature.
 
-        result = RSACipher.verify(public_key, aes_key, signature)
+        Example:
+            result = RSACipher.verify(public_key, aes_key, signature)
 
         :param text: the raw text
         :param signature: the signature(base64 format)
@@ -117,9 +121,9 @@ class RSACipher:
 
 class AESCipher:
     """
-    The aes utility class
+    The aes utility class.
 
-    The result of the encrypt is in base64 format
+    The result of the encrypt is in base64 format.
     """
 
     @staticmethod
@@ -127,7 +131,8 @@ class AESCipher:
         """
         Generate a 16-bit random key
 
-        aes_key = AESCipher.generate_key()
+        Example:
+            aes_key = AESCipher.generate_key()
 
         :return: key
         """
@@ -139,7 +144,8 @@ class AESCipher:
         """
         Encrypt data with aes key and iv.
 
-        encrypt_text = AESCipher.encrypt(data, aes_key)
+        Example:
+            encrypt_text = AESCipher.encrypt(data, aes_key)
 
         :param plaintext: the data to be encrypted
         :param key: the key used to create AES cipher
@@ -158,7 +164,8 @@ class AESCipher:
         """
         Decrypt ciphertext with aes key and iv.
 
-        decrypt_text = AESCipher.decrypt(encrypt_text, aes_key)
+        Example:
+            decrypt_text = AESCipher.decrypt(encrypt_text, aes_key)
 
         :param ciphertext: the ciphertext to be decrypted(base64 format)
         :param key: the key used to decrypt

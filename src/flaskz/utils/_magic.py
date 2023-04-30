@@ -4,16 +4,16 @@ __all__ = ['typed_property', 'init_properties']
 def typed_property(name, expected_type):
     """
     Example 1:
-    class Person:
-        name = typed_property('name', str)
-        age = typed_property('age', int)
+        class Person:
+            name = typed_property('name', str)
+            age = typed_property('age', int)
 
     Example 2:
-    String = partial(typed_property, expected_type=str)
-    Integer = partial(typed_property, expected_type=int)
-    class Person:
-        name = String('name')
-        age = Integer('age')
+        String = partial(typed_property, expected_type=str)
+        Integer = partial(typed_property, expected_type=int)
+        class Person:
+            name = String('name')
+            age = Integer('age')
 
     :param name:
     :param expected_type:
@@ -36,33 +36,34 @@ def typed_property(name, expected_type):
 
 def init_properties(self, extra_kwargs, *args, **kwargs):
     """
-    class A:
-        _fields = ['a', 'b', 'c']
+    Example:
+        class A:
+            _fields = ['a', 'b', 'c']
 
-        def __init__(self, *args, **kwargs):
-            init_property(self, False, *args, **kwargs)
-
-
-    class B:
-        _fields = ['a', 'b', 'c']
-
-        def __init__(self, *args, **kwargs):
-            init_property(self, True, *args, **kwargs)  # extended keyword arguments
+            def __init__(self, *args, **kwargs):
+                init_property(self, False, *args, **kwargs)
 
 
-    print(A(1, 2, 3))
-    print(A(1, 2, c=3))
-    print(A(1, b=2, c=3))
-    # print(A(1, 2, 3, e=4))  # TypeError: A got an unexpected keyword argument e
-    # print(A(1, 2, 3, 4))  # TypeError: A takes 3 positional arguments but 4 were given
-    # print(A(1, 2, 3, a=4))  # TypeError: A got an unexpected keyword argument a
+        class B:
+            _fields = ['a', 'b', 'c']
 
-    print(B(1, 2, 3))
-    print(B(1, 2, c=3))
-    print(B(1, b=2, c=3))
-    print(B(1, 2, 3, e=4))
-    # print(B(1, 2, 3, 4))  # TypeError: B takes 3 positional arguments but 4 were given
-    # print(B(1, 2, 3, a=4))  # TypeError: B got an unexpected keyword argument a
+            def __init__(self, *args, **kwargs):
+                init_property(self, True, *args, **kwargs)  # extended keyword arguments
+
+
+        print(A(1, 2, 3))
+        print(A(1, 2, c=3))
+        print(A(1, b=2, c=3))
+        # print(A(1, 2, 3, e=4))  # TypeError: A got an unexpected keyword argument e
+        # print(A(1, 2, 3, 4))  # TypeError: A takes 3 positional arguments but 4 were given
+        # print(A(1, 2, 3, a=4))  # TypeError: A got an unexpected keyword argument a
+
+        print(B(1, 2, 3))
+        print(B(1, 2, c=3))
+        print(B(1, b=2, c=3))
+        print(B(1, 2, 3, e=4))
+        # print(B(1, 2, 3, 4))  # TypeError: B takes 3 positional arguments but 4 were given
+        # print(B(1, 2, 3, a=4))  # TypeError: B got an unexpected keyword argument a
     """
     _fields = getattr(self, '_fields', [])
     filed_len = len(_fields)

@@ -8,6 +8,7 @@ __all__ = ['create_response', 'get_status_msg', 'ResponseManager']
 def create_response(success, data, data_wrapped=False):
     """
     Create the response json result.
+
     :param success:
     :param data:
     :param data_wrapped:
@@ -61,7 +62,8 @@ def _create_fail_response(status_code, msg=None):
 def get_status_msg(status_code):
     """
     Get the specified message by status_code.
-    Can be used to return internationalized text, Local can be fixed, or get the local from request
+    Can be used to return internationalized text, Local can be fixed, or get the local from request.
+
     :param status_code:
     :return:
     """

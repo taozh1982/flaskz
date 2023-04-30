@@ -2,26 +2,87 @@ import os
 
 from flask import current_app
 
-__all__ = ['get_app_path', 'get_app_config']
+__all__ = ['init_app_config', 'get_app_config', 'get_app_config_items', 'get_app_path']
+
+app_config = None
+
+
+def init_app_config(app):
+    """
+    Initialize application configuration.
+
+    Example:
+        init_app_config(app)    # Flask
+        init_app_config(DevelopmentConfig)  # Class
+        init_app_config({...})  # dict
+
+    .. versionadded:: 1.5
+
+    :param app:Flask/Config/dict
+    :return:
+    """
+    config = get_app_config_items(app)
+    if type(config) is dict:
+        global app_config
+        app_config = config
+
+
+def get_app_config(key=None):
+    """
+    Get the specified config value of the application.
+    If the config is initialized by init_app_config, return the initialized config, otherwise return the config of the current application.
+    If key is None return all config values(dict), otherwise return the specified config value
+
+    .. versionupdated:: 1.5
+
+    :param key:
+    :return:
+    """
+    config = None
+    if app_config:
+        config = app_config
+    elif current_app:
+        config = dict(current_app.config.items())
+
+    if type(config) is not dict:
+        config = {}
+
+    if key is None:
+        return config
+    return config.get(key)
+
+
+def get_app_config_items(app):
+    """
+    Return config items(dict)
+    :param app:
+    :return:
+    """
+    items = None
+    if hasattr(app, 'config'):  # Flask
+        _app_config = getattr(app, 'config')
+        if _app_config:
+            items = dict(_app_config.items())
+    elif isinstance(app, type):  # Class
+        items = cls_to_dict(app)
+    else:
+        items = app  # dict
+    if type(items) is dict:
+        return items
+    return None
 
 
 def get_app_path(*path):
     """
     Get the application path.
-    app.get_app_path("_log", "sys.log")
+
+    Example:
+        app.get_app_path("_log", "sys.log")
+
     :param path:    -The relative path
     :return:        -The path relative to the application root directory
     """
     return os.path.join(os.getcwd(), *path)
 
 
-def get_app_config(key=None):
-    """
-    Set the specified config value of the current app
-    :param key:
-    :return:
-    """
-    app_config = current_app.config
-    if key is None:
-        return app_config
-    return app_config.get(key)
+from ._cls import cls_to_dict

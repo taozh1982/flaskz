@@ -19,7 +19,11 @@ def _generate_cache_expire_data(data, expire_minutes=0):
 
 def set_app_cache(key, data, expire_minutes=0):
     """
-    Set the current application data cache, such as menu items
+    Set the current application data cache, such as menu items.
+
+    Example:
+        set_app_cache('sys_module_name_mapping', module_name_mapping)
+
     :param expire_minutes:
     :param key:
     :param data:
@@ -34,6 +38,10 @@ def set_app_cache(key, data, expire_minutes=0):
 def get_app_cache(key):
     """
     Get the current application data cache by the key.
+
+    Example:
+        module_name_mapping = get_app_cache('sys_module_name_mapping')
+
     :param key:
     :return:
     """
@@ -52,6 +60,7 @@ def get_app_cache(key):
 def clear_app_cache():
     """
     Clear all the current application data caches.
+
     :return:
     """
     cache = getattr(current_app, 'z_data_cache', None)
@@ -62,6 +71,10 @@ def clear_app_cache():
 def set_g_cache(key, data):
     """
     Set the data cache in g, such as db session.
+
+    Example:
+        set_g_cache('_flaskz_db_session', session)
+
     :param key:
     :param data:
     :return:
@@ -75,6 +88,10 @@ def set_g_cache(key, data):
 def get_g_cache(key):
     """
     Get the g data cache by the key.
+
+    Example:
+        session = get_g_cache('_flaskz_db_session')
+
     :param key:
     :return:
     """
@@ -87,6 +104,7 @@ def get_g_cache(key):
 def remove_g_cache(key):
     """
     Remove the g data cache.
+
     :param key:
     :return:
     """

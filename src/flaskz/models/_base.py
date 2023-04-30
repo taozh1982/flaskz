@@ -1,7 +1,7 @@
 from sqlalchemy import text
 
 from .. import res_status_codes
-from ..utils import find_list, filter_list, is_str, is_dict, ins_to_dict, get_dict_value_by_type
+from ..utils import find_list, filter_list, is_str, is_dict, is_list, ins_to_dict, get_dict_value_by_type
 
 __all__ = ['BaseModelMixin']
 
@@ -12,6 +12,10 @@ class BaseModelMixin:
     def get_class_name(cls):
         """
         Get the name of the model class.
+
+        Example:
+            User.get_class_name() #User
+
         :return:
         """
         return cls.__name__
@@ -20,7 +24,10 @@ class BaseModelMixin:
     def get_columns(cls):
         """
         Get all the columns of the model class.
-        Menu.get_cls_columns()
+
+        Example:
+            User.get_cls_columns()
+
         :return:
         """
         return cls.__table__.columns
@@ -28,9 +35,12 @@ class BaseModelMixin:
     @classmethod
     def get_columns_fields(cls):
         """
-        Get all the column fields
+        Get all the column fields.
 
          .. versionadded:: 1.3
+
+        Example:
+            User.get_columns_fields()
 
         :return:
         """
@@ -42,8 +52,8 @@ class BaseModelMixin:
     @classmethod
     def get_column_field(cls, col):
         """
-        Get the field variable name of the column, default return the key of the column
-        Used to get json fields to create or update data(get_columns_json), or convert data to json(_to_json)
+        Get the field variable name of the column, default return the key of the column.
+        Used to get json fields to create or update data(filter_attrs_by_columns), or convert data to json(_to_json).
 
         If the field name is different from the database column name
         #1 set field in info dict.(recommend)
@@ -69,7 +79,11 @@ class BaseModelMixin:
     @classmethod
     def get_column_by_field(cls, field):
         """
-        Get the column of the specified field
+        Get the column of the specified field.
+
+        Example:
+            User.get_column_by_field('name')
+
         :param field:
         :return:
         """
@@ -80,7 +94,11 @@ class BaseModelMixin:
     @classmethod
     def get_primary_column(cls):
         """
-         Get the primary column of the model class.
+        Get the primary column of the model class.
+
+        Example:
+            User.get_primary_column()   # id column
+
         :return:
         """
         return find_list(cls.get_columns(), lambda c: c.primary_key is True)
@@ -88,7 +106,11 @@ class BaseModelMixin:
     @classmethod
     def get_primary_key(cls):
         """
-        Get the primary_key of the model class.
+        Get the key of the primary column.
+
+        Example:
+            User.get_primary_key()  # 'id'
+
         :return:
         """
         col = cls.get_primary_column()
@@ -99,7 +121,11 @@ class BaseModelMixin:
     @classmethod
     def get_primary_field(cls):
         """
-        Get the primary_key field of the model class.
+        Get the field of the primary column.
+
+        Example:
+            User.get_primary_field()    # 'id'
+
         :return:
         """
         col = cls.get_primary_column()
@@ -110,8 +136,11 @@ class BaseModelMixin:
     @classmethod
     def get_unique_columns(cls):
         """
-        Get the unique column list of the model class
-         Menu.get_cls_unique_columns()
+        Get the unique column list of the model class.
+
+        Example:
+            User.get_unique_columns()
+
         :return:
         """
         return filter_list(cls.get_columns(), lambda col: col.unique is True)
@@ -120,7 +149,10 @@ class BaseModelMixin:
     def get_relationships(cls):
         """
         Get all the relationship list of the model class.
-         Menu.get_cls_relationships()
+
+        Example:
+            User.get_relationships()
+
         :return:
         """
         return cls.__mapper__.relationships
@@ -128,20 +160,7 @@ class BaseModelMixin:
     # -------------------------------------------About data-------------------------------------------
     def to_dict(self, option=None):
         """
-        # 过滤
-            -不同的class会有不同的条件过滤-->过滤掉不需要的属性(create_user/password)
-            -过滤条件可以是class上的属性，也可以是传递到方法中的exclude
-                -如果有include--->只返回include中的属性
-                -如果没有include而有exclude--->将exclude中的属性过滤掉
-        *# 如果属性是关系对象/列表，则
-        *#
-        *#
-        *#
-        # 单个对象很容易处理，但是 relationships不好处理
-        # 不同的relationship，cascade不同
-        # relation中可能有嵌套
-        # 有可能两个对象里都有同一个对象
-        Convert model data to dict
+        Convert model data to dict.
 
         ins_to_dict(A, {
             'cascade': 3,  # 如果子项没有cascade，则使用父项-1，如果cascade不大于0，则不对象属性
@@ -169,8 +188,21 @@ class BaseModelMixin:
             #     'exclude': ['x2']
             # }
         })
+
+        过滤
+            -不同的class会有不同的条件过滤-->过滤掉不需要的属性(create_user/password)
+            -过滤条件可以是class上的属性，也可以是传递到方法中的exclude
+                -如果有include--->只返回include中的属性
+                -如果没有include而有exclude--->将exclude中的属性过滤掉
+        # 如果属性是关系对象/列表，则
+
+
+
+        # 单个对象很容易处理，但是 relationships不好处理
+        # 不同的relationship，cascade不同
+        # relation中可能有嵌套
+        # 有可能两个对象里都有同一个对象
         """
-        cls = self.__class__
         opt = {
             'getattrs': lambda ins, *args, **kwargs: ins.__class__.get_to_dict_attrs(ins, *args, **kwargs),
             'include': lambda ins, key: ins.__class__.to_dict_field_filter(key),
@@ -181,6 +213,7 @@ class BaseModelMixin:
 
     @classmethod
     def get_to_dict_attrs(cls, ins, cascade, *args):
+        """to_dict attr """
         fields = [cls.get_column_field(col) for col in cls.get_columns()]
         if cascade > 0:
             for relationship in cls.get_relationships():
@@ -195,7 +228,7 @@ class BaseModelMixin:
     @classmethod
     def to_dict_field_filter(cls, field):
         """
-        to_dict callback.
+        to_dict field filter callback.
         If return false, the field will not be returned.
         :param field:
         :return:
@@ -203,13 +236,14 @@ class BaseModelMixin:
         return True
 
     @classmethod
-    def get_columns_json(cls, data):
+    def filter_attrs_by_columns(cls, data):
         """
-        Get the data corresponding to the column.
-        :param data::
+        Filter out the attributes(dict) corresponding to the columns from the specified data(dict).
+
+        :param data:
         :return:
         """
-        json = {}
+        attrs = {}
         auto_columns = getattr(cls, 'auto_columns', [])
         auto_fields = []
         for col in auto_columns:
@@ -224,11 +258,24 @@ class BaseModelMixin:
                 value = data.get(field)
                 if col.nullable is False:
                     if not (value is None or (is_str(value) and value.strip() == "")):
-                        json[field] = value
+                        attrs[field] = value
                 else:
-                    json[field] = value
+                    attrs[field] = value
 
-        return json
+        return attrs
+
+    @classmethod
+    def get_columns_json(cls, data):
+        """
+        Get the attributes(dict) corresponding to the column from the specified data(dict).
+
+        .. deprecated:: 1.5 please use filter_attrs_by_columns method
+
+        :param data:
+        :return:
+        """
+
+        return cls.filter_attrs_by_columns(data)
 
     # -------------------------------------------add-------------------------------------------
     @classmethod
@@ -251,7 +298,10 @@ class BaseModelMixin:
     @classmethod
     def add_db(cls, data):
         """
-        Add the data to the db.
+        Add data to the db.
+
+        Example:
+            User.add_db({"name": "taozh", "email": "taozh@focus-ui.com"})
 
         :param data:
         :return:
@@ -309,8 +359,11 @@ class BaseModelMixin:
     @classmethod
     def update_db(cls, data):
         """
-        Update the data to the db.
-        Only the fields in json will be updated
+        Update the data to the db. The primary key value must be in data.
+        Only the fields in data will be updated.
+
+        Example:
+            User.update_db({"id": 1, "email": "taozh@focus-ui.com"})
 
         :param data:
         :return:
@@ -329,7 +382,7 @@ class BaseModelMixin:
     @classmethod
     def bulk_update(cls, items, with_relationship=False):
         """
-        Perform a bulk update of the given list of mapping dictionaries
+        Perform a bulk update of the given list of mapping dictionaries.
 
         sa version upgrade: https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html
         :param items:
@@ -352,7 +405,7 @@ class BaseModelMixin:
     @classmethod
     def _update_ins(cls, instance, data):
         if instance:
-            for field in cls.get_columns_json(data):  # Only the fields in json will be updated
+            for field in cls.filter_attrs_by_columns(data):  # Only the fields in json will be updated
                 setattr(instance, field, data.get(field))
             relationships = create_relationships(cls, data)
             for field in relationships:
@@ -381,7 +434,11 @@ class BaseModelMixin:
     @classmethod
     def delete_db(cls, pk_value):
         """
-        Delete data from the db.
+        Delete the specified data with the specified primary key value.
+
+        Example:
+            User.delete_db(1)   # pk
+            User.delete_db({'id': 1})   # dict
 
         :param pk_value:
         :return:
@@ -389,7 +446,10 @@ class BaseModelMixin:
         if pk_value is None:  # Object does not exist
             return res_status_codes.db_data_not_found
         with db_session() as session:  # @2022-12-01 change to ensure the deleted instance and the delete action in the same session
-            instance = session.query(cls).get(pk_value)
+            if is_dict(pk_value):  # @2023-03-27 add
+                instance = session.query(cls).filter_by(**pk_value).limit(1).first()
+            else:
+                instance = session.query(cls).get(pk_value)
             if instance is None:  # Object does not exist
                 return res_status_codes.db_data_not_found
             session.delete(instance)
@@ -398,13 +458,14 @@ class BaseModelMixin:
     @classmethod
     def bulk_delete(cls, items):
         """
-        Perform a bulk delete of the given list of mapping dictionaries
-
-            Role.bulk_delete([1,2,3])
+        Perform a bulk delete of the given list of mapping dictionaries.
 
         .. versionupdated:: 1.0
 
-        sa version upgrade: https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html
+        Example:
+            User.bulk_delete([1,2,3])   # pk list
+            User.bulk_delete([{'id': 1}, {'id': 2}, {'id': 3}]) # dict list
+
         :param items:
         :return:
         """
@@ -415,8 +476,10 @@ class BaseModelMixin:
             pk_list = []
             for item in items:
                 if is_dict(item):
-                    instance = session.query(cls).filter_by(**item).limit(1).first()
-                    if instance:
+                    # instance = session.query(cls).filter_by(**item).limit(1).first()
+                    # if instance:
+                    #     pk_list.append(getattr(instance, pk))
+                    for instance in session.query(cls).filter_by(**item):  # @2023-03-27 first to all, ex)delete all items with same name
                         pk_list.append(getattr(instance, pk))
                 else:
                     pk_list.append(item)
@@ -429,10 +492,11 @@ class BaseModelMixin:
     @classmethod
     def query(cls):
         """
-        Return a 'Query' object corresponding to this class
+        Return a 'Query' object corresponding to this class.
 
-        query = TemplateModel.query()
-        print(query.all())
+        Example:
+            query = TemplateModel.query()
+            print(query.all())
 
         :return:
         """
@@ -442,8 +506,7 @@ class BaseModelMixin:
     @classmethod
     def get_query_default_order(cls):
         """
-        Get the default order of the query.
-        column key, not field
+        Get the default order of the query.(column key, not field)
 
         get_primary_key-->get_primary_column to fix
         sqlalchemy.exc.CompileError: Can't resolve label reference for ORDER BY / GROUP BY / DISTINCT etc.
@@ -458,6 +521,9 @@ class BaseModelMixin:
         Query data by the unique values.
         --If exist,returns the instance.
         --Otherwise,returns None
+
+        Example:
+            User.query_by_unique_key(data)
 
         :param data:
         :return:
@@ -485,6 +551,10 @@ class BaseModelMixin:
     def query_by_pk(cls, pk_value):
         """
         Query by pk value.
+
+        Example:
+            User.query_by_pk(1)
+
         :param pk_value:
         :return:
         """
@@ -496,8 +566,13 @@ class BaseModelMixin:
     def query_by(cls, by_dict, return_first=False):
         """
         Query by dict object.
-        -If first is True, return the first row object or None.
         -If first is not True, return the list result of the query.
+        -If first is True, return the first row object or None.
+
+        Example:
+            User.query_by({'name': 'flaskz'})   # list
+            User.query_by({'name': 'flaskz'}, True) # first row
+
         """
         with db_session(do_commit=False) as session:
             if return_first is True:
@@ -510,6 +585,10 @@ class BaseModelMixin:
     def query_all(cls):
         """
         Query all the data of the model class.
+
+        Example:
+            User.query_all()
+
         :return:
         """
         query_order = cls.get_query_default_order()
@@ -524,36 +603,42 @@ class BaseModelMixin:
     def query_pss(cls, pss_option):
         """
         Query data by search, pagination and sort condition.
+        Please use flaskz.utils.get_pss to parse option first.
+        pss = page+search+sort
 
         Example:
-        result, result = TemplateModel.query_pss(get_pss(   # use flaskz.utils.get_pss to format condition
-            TemplateModel, {   # FROM templates
-                "search": {                         # WHERE
-                    "like": "t",                    # name like '%t%' OR description like '%t%' (TemplateModel.like_columns = ['name', description])
-                    "age": {                        # AND (age>1 AND age<20)
-                        ">": 1,                     # operator:value, operators)'='/'>'/'<'/'>='/'<='/'BETWEEN'/'LIKE'/'IN'
-                        "<": 20
-                    },
-                    "email": "taozh@focus-ui.com",  # AND (email='taozh@focus-ui.com')
-                    "_ors": {                       # AND (country='America' OR country='Canada')
-                        "country": "America||Canada"
-                    },
-                    "_ands": {                      # AND (grade>1 AND grade<5)
-                        "grade": {
-                            ">": 1,
-                            "<": 5
+            result, result = TemplateModel.query_pss(get_pss(   # use flaskz.utils.get_pss to format condition
+                TemplateModel, {   # FROM templates
+                    "search": {                         # WHERE
+                        "like": "t",                    # name like '%t%' OR description like '%t%' (TemplateModel.like_columns = ['name', description])
+                        "age": {                        # AND (age>1 AND age<20)
+                            ">": 1,                     # operator:value, operators)'='/'>'/'<'/'>='/'<='/'BETWEEN'/'LIKE'/'IN'
+                            "<": 20
+                        },
+                        "email": "taozh@focus-ui.com",  # AND (email='taozh@focus-ui.com')
+                        "_ors": {                       # AND (country='America' OR country='Canada')
+                            "country": "America||Canada"
+                        },
+                        "_ands": {                      # AND (grade>1 AND grade<5)
+                            "grade": {
+                                ">": 1,
+                                "<": 5
+                            }
                         }
+                    },
+                    "sort": {                           # ORDER BY templates.name ASC
+                        "field": "name",
+                        "order": "asc"
+                    },
+                    # "sort":[                          # ORDER BY templates.name ASC, templates.age DESC
+                    #     {"field": "name", "order": "asc"},
+                    #     {field": "age", "order": "desc"}
+                    # ],
+                    "page": {                           # LIMIT ? OFFSET ? (20, 0)
+                        "offset": 0,
+                        "size": 20
                     }
-                },
-                "sort": {                           # ORDER BY templates.name ASC
-                    "field": "name",
-                    "order": "asc"
-                },
-                "page": {                           # LIMIT ? OFFSET ? (20, 0)
-                    "offset": 0,
-                    "size": 20
-                }
-            }))
+                }))
 
         # sql
         SELECT templates.id AS templates_id, templates.name AS templates_name, templates.age AS templates_age, templates.email AS templates_email,
@@ -573,16 +658,19 @@ class BaseModelMixin:
         filter_likes = pss_option.get('filter_likes', [])
         filter_ands = pss_option.get('filter_ands', [])
         filter_ors = pss_option.get('filter_ors', [])
-        # offset = pss_option.get('offset', 0)
-        # limit = pss_option.get('limit', 0)
         offset = max(get_dict_value_by_type(pss_option, 'offset', int, 0), 0)  # @2023-01-09 update, add type check
         limit = max(get_dict_value_by_type(pss_option, 'limit', int, 0), 0)
 
         # pss_json.get('order') or cls.get_query_default_order()
         # bool(pss_json.get('order')) --> Boolean value of this clause is not defined
-        order = pss_option.get('order')
-        if order is None:
-            order = cls.get_query_default_order()
+        orders = pss_option.get('order')
+        if orders is None:
+            orders = [cls.get_query_default_order()]  # default order
+        elif not is_list(orders):  # asc/desc
+            orders = [orders]
+
+        if not is_list(orders):
+            orders = []
 
         with db_session(do_commit=False) as session:
             query = session.query(cls)
@@ -594,7 +682,9 @@ class BaseModelMixin:
                 query = query.filter(text('(' + (' OR '.join(filter_ors)) + ')'))
             count = query.count()
             if count > 0 and offset < count:
-                query = query.order_by(order).offset(offset)
+                for order in orders:
+                    query = query.order_by(order)
+                query = query.offset(offset)
                 if limit > 0:
                     query = query.limit(limit)
                 items = query.all()
@@ -609,7 +699,8 @@ class BaseModelMixin:
     @classmethod
     def _get_pk_value(cls, data):
         """
-        Get the primary key value from the json data
+        Get the primary key value from the json data.
+
         :param data:
         :return:
         """
@@ -620,8 +711,9 @@ class BaseModelMixin:
     @classmethod
     def _check_exist(cls, data):
         """
-        Check whether the data exists
-        Return True if exists, else return not found code
+        Check whether the data exists.
+        Return True if exists, else return not found code.
+
         :param data:
         :return:
         """

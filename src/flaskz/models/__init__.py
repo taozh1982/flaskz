@@ -10,7 +10,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from ..log import flaskz_logger
-from ..utils import Attribute
+from ..utils import Attribute, cls_to_dict
 
 DBSession = sessionmaker(autocommit=False)
 
@@ -19,14 +19,10 @@ ModelBase = declarative_base()
 
 def init_model(app):
     """
-    Initialize the database
+    Initialize the database.
     """
     is_app = isinstance(app, Flask)
-    if is_app:
-        app_config = app.config
-    else:
-        app_config = app
-    # app_config = app.config
+    app_config = get_app_config_items(app) or {}
     database_uri = app_config.get('FLASKZ_DATABASE_URI')
 
     # enable sqlite foreign key
@@ -70,7 +66,7 @@ def init_model(app):
                         engine_err_info['connect_time'] = now
                         engine.connect()  # reconnect
 
-    except Exception as e:
+    except Exception:
         flaskz_logger.exception('Connect to database ' + database_uri + ' error\n')
         return
 
@@ -104,9 +100,6 @@ def init_model(app):
                 'context': context,
             }))
 
-        # if duration > db_slow_time:
-        #     app_logger.warning('Slow query: %s\nParameters: %s\nDuration: %fms\n' % (statement, parameters, duration))
-
         db_slow_time = app_config.get('FLASKZ_DATABASE_DEBUG_SLOW_TIME', -1)  # set config['FLASKZ_DATABASE_DEBUG_SLOW_TIME'] to enable
         db_access_times = app_config.get('FLASKZ_DATABASE_DEBUG_ACCESS_TIMES', -1)  # set config['FLASKZ_DATABASE_DEBUG_ACCESS_TIMES'] to enable
         if db_slow_time > 0 or db_access_times > 0:
@@ -131,3 +124,5 @@ def init_model(app):
 from ._base import *
 from ._model import *
 from ._util import *
+
+from ..utils import get_app_config_items
