@@ -13,7 +13,7 @@
 
 ## 版本
 
-- **1.5.1** `2023/05/17`
+- **1.5.2** `2023/05/17`
     - [C] `db_session`上下文管理器自动关闭非缓存session
     - [F] 修复`BaseModelMixin.get_query_default_order`默认排序在`query_pss`方法中不起作用的问题
 - **1.5** `2023/05/01`

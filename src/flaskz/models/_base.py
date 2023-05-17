@@ -674,9 +674,8 @@ class BaseModelMixin:
             orders = [orders]
 
         if len(orders) == 0:  # @2023-05-04 fix
-            default_order = cls.get_query_default_order()
-            if default_order:
-                orders = [default_order]  # default order
+            orders = [cls.get_query_default_order()]  # default order
+        orders = [item for item in orders if item is not None]
 
         with db_session(do_commit=False) as session:
             query = session.query(cls)
@@ -688,9 +687,12 @@ class BaseModelMixin:
                 query = query.filter(text('(' + (' OR '.join(filter_ors)) + ')'))
             count = query.count()
             if count > 0 and offset < count:
-                for order in orders:
-                    if order is not None:
-                        query = query.order_by(order)
+                # for order in orders:
+                #     if order is not None:
+                #         query = query.order_by(order)
+                if len(orders) > 0:
+                    query = query.order_by(*orders)
+
                 query = query.offset(offset)
                 if limit > 0:
                     query = query.limit(limit)
