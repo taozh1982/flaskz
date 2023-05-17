@@ -29,10 +29,11 @@ def set_app_cache(key, data, expire_minutes=0):
     :param data:
     :return:
     """
-    cache = getattr(current_app, 'z_data_cache', None)
-    if cache is None:
-        cache = current_app.z_data_cache = {}
-    cache[key] = _generate_cache_expire_data(data, expire_minutes)
+    if current_app:
+        cache = getattr(current_app, 'z_data_cache', None)
+        if cache is None:
+            cache = current_app.z_data_cache = {}
+        cache[key] = _generate_cache_expire_data(data, expire_minutes)
 
 
 def get_app_cache(key):
@@ -45,14 +46,15 @@ def get_app_cache(key):
     :param key:
     :return:
     """
-    cache = getattr(current_app, 'z_data_cache', None)
-    if cache:
-        data = cache.get(key)
-        if is_dict(data) and '_zexpires_time' in data:
-            if data.get('_zexpires_time') < time.time():
-                return None
-            return data.get('data')
-        return data
+    if current_app:
+        cache = getattr(current_app, 'z_data_cache', None)
+        if cache:
+            data = cache.get(key)
+            if is_dict(data) and '_zexpires_time' in data:
+                if data.get('_zexpires_time') < time.time():
+                    return None
+                return data.get('data')
+            return data
 
     return None
 
@@ -63,9 +65,10 @@ def clear_app_cache():
 
     :return:
     """
-    cache = getattr(current_app, 'z_data_cache', None)
-    if cache:
-        cache.clear()
+    if current_app:
+        cache = getattr(current_app, 'z_data_cache', None)
+        if cache:
+            cache.clear()
 
 
 def set_g_cache(key, data):
@@ -79,10 +82,11 @@ def set_g_cache(key, data):
     :param data:
     :return:
     """
-    cache = getattr(g, 'z_data_cache', None)
-    if cache is None:
-        cache = g.z_data_cache = {}
-    cache[key] = data
+    if g:
+        cache = getattr(g, 'z_data_cache', None)
+        if cache is None:
+            cache = g.z_data_cache = {}
+        cache[key] = data
 
 
 def get_g_cache(key):
@@ -95,10 +99,11 @@ def get_g_cache(key):
     :param key:
     :return:
     """
-    cache = getattr(g, 'z_data_cache', None)
-    if cache:
-        return cache.get(key)
-    return None
+    if g:
+        cache = getattr(g, 'z_data_cache', None)
+        if cache:
+            return cache.get(key)
+        return None
 
 
 def remove_g_cache(key):
@@ -108,6 +113,7 @@ def remove_g_cache(key):
     :param key:
     :return:
     """
-    cache = getattr(g, 'z_data_cache', None)
-    if cache:
-        del cache[key]
+    if g:
+        cache = getattr(g, 'z_data_cache', None)
+        if cache:
+            del cache[key]

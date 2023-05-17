@@ -3,17 +3,21 @@ import json
 import logging
 import os
 from logging.handlers import TimedRotatingFileHandler
+from typing import Union
 
-from flask import Flask
 from werkzeug.local import LocalProxy
 
 _flaskz_logger: logging.Logger = None  # @2022-04-27: fix _get_app_logger --> NameError: name '_flaskz_logger' is not defined
-flaskz_logger = LocalProxy(lambda: _get_app_logger())
+flaskz_logger: Union[LocalProxy, logging.Logger] = LocalProxy(lambda: _get_app_logger())  # @2023-05-15: add type Union
 
 
 def init_log(app):
     """
     Initialize system log configuration
+
+    Example:
+        init_log(app)
+
     :param app:
     :return:
     """

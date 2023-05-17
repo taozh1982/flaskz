@@ -10,7 +10,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from ..log import flaskz_logger
-from ..utils import Attribute, cls_to_dict
+from ..utils import Attribute
 
 DBSession = sessionmaker(autocommit=False)
 
@@ -20,6 +20,10 @@ ModelBase = declarative_base()
 def init_model(app):
     """
     Initialize the database.
+
+    Example:
+        init_model(flask_app)
+
     """
     is_app = isinstance(app, Flask)
     app_config = get_app_config_items(app) or {}

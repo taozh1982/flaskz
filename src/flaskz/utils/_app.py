@@ -10,13 +10,15 @@ app_config = None
 def init_app_config(app):
     """
     Initialize application configuration.
+    Once initialized, the application configuration can be get through get_app_config function anywhere.
+
+    .. versionadded:: 1.5
 
     Example:
         init_app_config(app)    # Flask
         init_app_config(DevelopmentConfig)  # Class
         init_app_config({...})  # dict
 
-    .. versionadded:: 1.5
 
     :param app:Flask/Config/dict
     :return:
@@ -34,6 +36,10 @@ def get_app_config(key=None):
     If key is None return all config values(dict), otherwise return the specified config value
 
     .. versionupdated:: 1.5
+
+    Example:
+        get_app_config()                        # all Config
+        get_app_config('FLASKZ_LOGGER_LEVEL')   # specified config value
 
     :param key:
     :return:

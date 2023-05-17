@@ -4,7 +4,7 @@ If use it, please install the 'requests' package first
 """
 import inspect
 import textwrap
-import urllib
+from urllib import parse as urllib_parse
 
 import requests
 from flask import request
@@ -58,10 +58,12 @@ def api_request(url, method="GET", url_params=None, base_url="", raw_response=Fa
         _url = url
 
     if base_url:
-        _url = base_url + _url
+        base_url = base_url.rstrip('/')
+        _url = _url.lstrip('/')
+        _url = base_url + '/' + _url
 
     if is_dict(url_params):
-        _url = _url.format(**url_params)
+        _url = append_url_search_params(_url, url_params)
 
     _method = _method.strip().upper()
 
@@ -117,7 +119,7 @@ def forward_request(url, payload=None, raw_response=False, error_code=500, **kwa
         if item == 'json':  # @2022-05-06: fix request.json -->BadRequest('Content-Type was not 'application/json')
             req_kwargs[item] = request.get_json(force=True, silent=True)
         else:
-            req_kwargs[item] = getattr(request, item)
+            req_kwargs[item] = getattr(request, item, None)
     req_kwargs.update(kwargs)  # kwargs high priority
 
     url_params = req_kwargs.get('url_params')
@@ -138,20 +140,49 @@ def forward_request(url, payload=None, raw_response=False, error_code=500, **kwa
 
 def append_url_search_params(url, params):  # @2022-05-09: add
     """
-    Appends a specified key/value pair as a new search parameter.
+    Appends specified key/value pair as search parameter.
+    Only append the key if its value is None.
 
     Example:
-        append_url_search_params('https://example.com',{'foo':1,'bar':2}) --> 'https://example.com?foo=1&bar=2' # append
-        append_url_search_params('https://example.com?foo=1&bar=2',{'baz':3}) --> 'https://example.com?foo=1&bar=2&baz=3' # append
-        append_url_search_params('https://example.com?foo=1&bar=2',{'bar':3}) --> 'https://example.com?foo=1&bar=3' # replace
-        append_url_search_params('a/b',{'c':3}) --> 'a/b?c=3'
+        append_url_search_params('https://example.com',{'foo':1,'bar':2, 'xx': None}) # 'https://example.com?foo=1&bar=2&xx' # append
+        append_url_search_params('https://example.com?foo=1&bar=2',{'baz':3}) # 'https://example.com?foo=1&bar=2&baz=3' # append
+        append_url_search_params('https://example.com?foo=1&bar=2',{'bar':3}) # 'https://example.com?foo=1&bar=3' # replace
+        append_url_search_params('a/b',{'c':3,'d':None}) # 'a/b?c=3&d'
+
+        append_url_search_params('https://example.com', ['a', 'b', 'c=2']) # 'https://example.com?a&b&c=2'
+        append_url_search_params('https://example.com', 'a=1&b=2&c')  # 'https://example.com?a=1&b=2&c'
 
     :param url:
     :param params:
     :return:
 
     """
-    url_parts = urllib.parse.urlparse(url)
-    query = dict(urllib.parse.parse_qsl(url_parts.query))
-    query.update(params)
-    return url_parts._replace(query=urllib.parse.urlencode(query)).geturl()
+    url_parts = urllib_parse.urlparse(url)
+    query = dict(urllib_parse.parse_qsl(url_parts.query))
+
+    kv_params = {}
+    k_params = []
+    params_type = type(params)
+    if params_type is list:
+        k_params = params
+    elif params_type is str:
+        k_params = [params]
+    elif params_type is dict:
+        for k, v in params.items():
+            if v is not None:
+                kv_params[k] = v
+            else:
+                k_params.append(k)
+        query.update(kv_params)
+
+    query_string = urllib_parse.urlencode(query)
+    if len(k_params) > 0:
+        k_str = '&'.join(k_params)
+        if query_string:
+            if not k_str.startswith('&'):
+                k_str = '&' + k_str
+            query_string += k_str
+        else:
+            query_string += k_str
+
+    return url_parts._replace(query=query_string).geturl()

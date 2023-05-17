@@ -13,6 +13,9 @@
 
 ## 版本
 
+- **1.5.1** `2023/05/17`
+    - [C] `db_session`上下文管理器自动关闭非缓存session
+    - [F] 修复`BaseModelMixin.get_query_default_order`默认排序在`query_pss`方法中不起作用的问题
 - **1.5** `2023/05/01`
     - [A] 重构`flaskz.rest`路由生成模块*
         - 添加`register_model_route`函数，可用于生成指定数据模型的CRUD等路由
@@ -24,7 +27,6 @@
         - 添加`register_model_query_pss_route`函数，可用于生成指定数据模型的条件查询(分页+搜索+排序)路由
         - 添加`register_models_query_route`函数，可用于生成多个数据模型的全量查询路由
     - [A] `ModelMixin.query_pss`方法支持多列排序*
-    - [A] 添加`flaskz.utils.init_app_config`函数, 用于初始化系统配置
     - [A] `flaskz.models.init_model`和`flaskz.log.init_log`函数添加对`Class`类型参数的支持
     - [A] `BaseModelMixin.delete_db`方法添加对`dict`类型参数的支持
     - [A] `flaskz.utils`添加`cls_to_dict`函数, 用于生成类属性的dict对象
@@ -41,7 +43,7 @@
     - [A] `init_model`函数添加数据库连接异常处理和重新连接
     - ~~[C] `init_model_rest_blueprint`函数生成的删除路由URL中的id参数添加`path`类型转换(v1.3.1已移除)~~
 - **1.1** `2023/01/01`
-    - [F] 修复`BaseModelMixin`的`update_db`和`delete_db`方法在非flask应用或没有flask应用上下文时的操作失败问题
+    - [F] 修复`BaseModelMixin`的`update_db`和`delete_db`方法在非Flask应用或没有Flask应用上下文时的操作失败问题
 - **1.0** `2022/12/01`
     - [A] 添加`flaskz.utils.set_timeout`和`flaskz.utils.set_interval`函数用于延迟和周期性函数执行
     - [A] `flaskz.ext.ssh`添加`timeout`参数以设置超时时间(登录&命令执行)
@@ -50,7 +52,7 @@
     - [A] 添加`flaskz.auth`包, 提供了JWS授权功能
     - [A] 添加`flaskz.ext.ssh`, 提供了ssh相关功能(`pip install paramiko`)
 - **0.8** `2022/08/01`
-    - [A] `BaseModelMixin`和`ModelMixin`模型扩展类添加没有flask上下文环境时的使用支持
+    - [A] `BaseModelMixin`和`ModelMixin`模型扩展类添加没有Flask上下文环境时的使用支持
     - [A] 添加`flaskz.ext`包用于存放扩展工具类, 请注意ext包中的代码依赖的第三方包, 不在flaskz的install_requires中, 需要单独安装
     - [C] 将`flaskz.utils.RSACipher`和`flaskz.utils.AESCipher`类所在的`cypher.py`文件移到了`flaskz.ext`包中
 - **0.7** `2022/06/01`

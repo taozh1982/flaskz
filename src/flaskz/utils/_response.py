@@ -81,9 +81,10 @@ def get_status_msg(status_code):
 
 
 def get_current_response_manager(callback_name):
-    response_manager = getattr(current_app, 'response_manager', None)
-    if response_manager:
-        return getattr(response_manager, callback_name)
+    if current_app:
+        response_manager = getattr(current_app, 'response_manager', None)
+        if response_manager:
+            return getattr(response_manager, callback_name, None)
 
 
 class ResponseManager:

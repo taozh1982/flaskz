@@ -12,19 +12,21 @@ __all__ = ['get_current_model_rest_manager_callback',
 
 
 def get_current_model_rest_manager_callback(callback_name):
-    model_rest_manager = getattr(current_app, 'model_rest_manager', None)
-    if model_rest_manager:
-        return getattr(model_rest_manager, callback_name)
+    if current_app:
+        model_rest_manager = getattr(current_app, 'model_rest_manager', None)
+        if model_rest_manager:
+            return getattr(model_rest_manager, callback_name, None)
 
 
 def rest_login_required():
     """
     If you decorate a view with this, it will ensure that the current user is logged in and authenticated before calling the actual view.
 
-    @sys_mgmt_bp.route('/auth/account/', methods=['GET', 'POST'])
-    @rest_login_required()
-    def sys_auth_account_query():
-        pass
+    Example:
+        @sys_mgmt_bp.route('/auth/account/', methods=['GET', 'POST'])
+        @rest_login_required()
+        def sys_auth_account_query():
+            pass
 
     :return:
     """
@@ -50,15 +52,16 @@ def rest_permission_required(module, op_permission=None):
     If you decorate a view with this, it will ensure that the current user.
     has the module permission and operation permission before calling the actual view.
 
-    @sys_mgmt_bp.route('/role/', methods=['GET'])
-    @rest_permission_required('role')
-    def sys_role_query():
-        pass
+    Example:
+        @sys_mgmt_bp.route('/role/', methods=['GET'])
+        @rest_permission_required('role')
+        def sys_role_query():
+            pass
 
-    @sys_mgmt_bp.route('/role/', methods=['POST'])
-    @rest_permission_required('role', 'add')
-    def sys_role_add():
-        pass
+        @sys_mgmt_bp.route('/role/', methods=['POST'])
+        @rest_permission_required('role', 'add')
+        def sys_role_add():
+            pass
 
     :param module:
     :param op_permission:

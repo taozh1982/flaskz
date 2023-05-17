@@ -190,7 +190,7 @@ def get_ins_mapping(ins_list, attr, deep=False):
             map_dict[k_value] = item
     else:
         for item in ins_list:
-            map_dict[getattr(item, attr)] = item
+            map_dict[getattr(item, attr, None)] = item
 
     return map_dict
 

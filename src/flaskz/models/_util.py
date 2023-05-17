@@ -70,7 +70,7 @@ def create_relationships(model_cls, data):
 
 def query_all_models(*models):
     """
-    Query all the data of the specified model list.
+    Query all the data of the specified model(ModelMixin) list.
 
     .. versionadded:: 1.5
 
@@ -96,7 +96,7 @@ def query_all_models(*models):
 
 def query_multiple_model(*cls_list):
     """
-    Query all the data of the multiple specified model class.
+    Query all the data of the multiple specified model(ModelMixin) class.
 
     Example:
         result = query_multiple_model(User, Role)
@@ -122,17 +122,15 @@ def get_debug_queries():
     return []
 
 
-def _has_g_context():
-    if not g:  # @2022-11-28: change, (not g) != (g is None)
-        return False
-    return True
-    # return has_request_context() or g is not None
-
-
 def get_db_session():
     """
-    Get the db session from g(flask)/ Create a db session.
+    Get the db session from g(flask)/ Create a db session(without request).
     If not exist, create a session and return.
+
+    Example:
+        session = get_db_session()
+        session.query(User).all()
+        session.close()             # close session
 
     :return:
     """
@@ -140,6 +138,7 @@ def get_db_session():
         session = get_g_cache('_flaskz_db_session')
         if session is None:
             session = DBSession()
+            setattr(session, '_flaskz_db_session', True)
             set_g_cache('_flaskz_db_session', session)
     else:
         session = DBSession()
@@ -164,8 +163,8 @@ def db_session(do_commit=True):
     Database session context manager.
 
     Example:
-        instance = create_instance(cls, json_data)
         with db_session() as session:
+            instance = create_instance(cls, json_data)
             session.add(instance)
 
     :param do_commit: If false, session will not commit,generally used for query operations
@@ -180,6 +179,8 @@ def db_session(do_commit=True):
         if do_commit is not False:
             session.rollback()
         raise e
+    if getattr(session, '_flaskz_db_session', None) is not True:  # @2023-05-06: add, close non-cached session
+        session.close()
 
 
 def model_to_dict(ins, option=None):
@@ -216,3 +217,12 @@ def is_model_mixin_instance(obj):
     :return:
     """
     return isinstance(obj, BaseModelMixin)
+
+
+def _has_g_context():
+    # if has_request_context():  # If there is request context, g must exist
+    #     return True
+    if not g:  # @2022-11-28: change, (not g) != (g is None)
+        return False
+    return True
+    # return has_request_context() or g is not None

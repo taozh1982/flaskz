@@ -1,4 +1,4 @@
-from sqlalchemy import text
+from sqlalchemy import text, Integer, Numeric
 
 from .. import res_status_codes
 from ..utils import find_list, filter_list, is_str, is_dict, is_list, ins_to_dict, get_dict_value_by_type
@@ -222,7 +222,7 @@ class BaseModelMixin:
                     fields.append(relationship.key)
         items = {}
         for field in fields:
-            items[field] = getattr(ins, field)
+            items[field] = getattr(ins, field, None)
         return items
 
     @classmethod
@@ -255,12 +255,18 @@ class BaseModelMixin:
         for col in cls.get_columns():
             field = cls.get_column_field(col)  # col.key
             if (field in data) and (field not in auto_fields) and (not col.info.get('auto', False)):
+                col_type = col.type
                 value = data.get(field)
+                is_blank_str = is_str(value) and value.strip() == ""
                 if col.nullable is False:
-                    if not (value is None or (is_str(value) and value.strip() == "")):
+                    if not (value is None or is_blank_str):
                         attrs[field] = value
                 else:
-                    attrs[field] = value
+                    # @2023-05-16 add to fix DataError: (1366, "Incorrect integer value: '' for column")
+                    if is_blank_str and (isinstance(col_type, Integer) or isinstance(col_type, Numeric)):
+                        attrs[field] = None
+                    else:
+                        attrs[field] = value
 
         return attrs
 
@@ -405,8 +411,8 @@ class BaseModelMixin:
     @classmethod
     def _update_ins(cls, instance, data):
         if instance:
-            for field in cls.filter_attrs_by_columns(data):  # Only the fields in json will be updated
-                setattr(instance, field, data.get(field))
+            for field, value in cls.filter_attrs_by_columns(data).items():  # Only the fields in json will be updated
+                setattr(instance, field, value)  # @2023-05-11, data.get(field)-->ins_attrs.get(field)
             relationships = create_relationships(cls, data)
             for field in relationships:
                 setattr(instance, field, relationships[field])
@@ -661,16 +667,16 @@ class BaseModelMixin:
         offset = max(get_dict_value_by_type(pss_option, 'offset', int, 0), 0)  # @2023-01-09 update, add type check
         limit = max(get_dict_value_by_type(pss_option, 'limit', int, 0), 0)
 
-        # pss_json.get('order') or cls.get_query_default_order()
-        # bool(pss_json.get('order')) --> Boolean value of this clause is not defined
         orders = pss_option.get('order')
         if orders is None:
-            orders = [cls.get_query_default_order()]  # default order
+            orders = []
         elif not is_list(orders):  # asc/desc
             orders = [orders]
 
-        if not is_list(orders):
-            orders = []
+        if len(orders) == 0:  # @2023-05-04 fix
+            default_order = cls.get_query_default_order()
+            if default_order:
+                orders = [default_order]  # default order
 
         with db_session(do_commit=False) as session:
             query = session.query(cls)
@@ -683,7 +689,8 @@ class BaseModelMixin:
             count = query.count()
             if count > 0 and offset < count:
                 for order in orders:
-                    query = query.order_by(order)
+                    if order is not None:
+                        query = query.order_by(order)
                 query = query.offset(offset)
                 if limit > 0:
                     query = query.limit(limit)
@@ -744,7 +751,7 @@ class BaseModelMixin:
         attrs = []
         for col in cls.get_columns():
             field = cls.get_column_field(col)
-            attrs.append(field + '=' + str(getattr(self, field)))
+            attrs.append(field + '=' + str(getattr(self, field, None)))
         return cls.get_class_name() + '(' + (', '.join(attrs)) + ')'
 
     # -------------------------------------------new-------------------------------------------

@@ -13,7 +13,8 @@ def get_remote_addr():
 
     :return:
     """
-    return request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
+    if request:
+        return request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
 
 
 def is_ajax():
@@ -21,7 +22,9 @@ def is_ajax():
     Check if the request is an ajax request.
     :return:
     """
-    return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    if request:
+        return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    return False
 
 
 def get_request_json(*args):
