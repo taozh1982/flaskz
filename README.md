@@ -13,6 +13,9 @@
 
 ## 版本
 
+- **1.5.3** `2023/06/01`
+    - [F] `flaskz.util.api_request`函数的`url_params`参数仅用于url中的`{变量}`替换而不添加查询字符串
+    - [A] `flaskz.util.api_request`函数添加`url_search_params`参数用于添加url查询字符串
 - **1.5.2** `2023/05/17`
     - [C] `db_session`上下文管理器自动关闭非缓存session
     - [F] 修复`BaseModelMixin.get_query_default_order`默认排序在`query_pss`方法中不起作用的问题

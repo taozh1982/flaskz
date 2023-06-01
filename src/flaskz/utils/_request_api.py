@@ -62,8 +62,16 @@ def api_request(url, method="GET", url_params=None, base_url="", raw_response=Fa
         _url = _url.lstrip('/')
         _url = base_url + '/' + _url
 
-    if is_dict(url_params):
-        _url = append_url_search_params(_url, url_params)
+    if is_dict(url_params):  # @2023-05-30 update variables(for replace)
+        _url = _url.format(**url_params)
+
+    url_variables = kwargs.get('url_variables', None)  # @2023-05-30 add variables(for replace)
+    if is_dict(url_variables):
+        _url = _url.format(**url_variables)
+
+    url_search_params = kwargs.get('url_search_params', None)  # @2023-05-30 add search_params(for append)
+    if url_search_params is not None:
+        _url = append_url_search_params(_url, url_search_params)
 
     _method = _method.strip().upper()
 
