@@ -8,11 +8,9 @@ import socket
 import stat
 import time
 from contextlib import contextmanager
-from datetime import datetime
 
 import paramiko
 from paramiko.ssh_exception import SSHException
-from paramiko.util import retry_on_signal
 
 
 @contextmanager
@@ -22,7 +20,13 @@ def ssh_session(hostname, username, password=None, port=22, **kwargs):
 
     Example:
         with ssh_session(host, username, password, timeout=20) as ssh:
-            ssh.run_command("ls -l")
+            ssh.run_command('ls -l')
+
+        with ssh_session(host, username, password, timeout=20) as ssh:
+            ssh.run_command_list(['show version', 'show running-config'])
+
+        with ssh_session(host, username, password, timeout=20, secondary_password=enable_pwd, recv_endswith=['# ', '$ ', ': ', '? ', '#']) as ssh:
+            ssh.run_command_list(['enable', 'show run'])
 
     """
     ssh_client = SSH(hostname=hostname, username=username, password=password, port=port, **kwargs)
@@ -35,16 +39,40 @@ class SSH(object):
         """
         Create a SSH instance.
 
+        .. versionupdated:: 1.6 - add secondary_password and recv_endswith kwargs
+
         Example:
             ssh = SSH(host, username, password, timeout=20)
+            ssh.run_command('ls -l')
+
+            ssh = SSH(host, username, password, timeout=20)
+            ssh.run_command_list(['enable', enable_pwd, 'show run'])
+
+            ssh = SSH(host, username, password, timeout=20, secondary_password=enable_pwd, recv_endswith=['# ', '$ ', ': ', '? ', '#'])
+            ssh.run_command_list(['enable', 'show run'])
+
+
+        :param hostname: the host(address) to ssh
+        :param username: the username of the host
+        :param password: the password of the host
+        :param port: the ssh port, default is 22
+        :param kwargs:
+                - secondary_password: use for enable/sudo action, if None, the password needs to be sent through the command
+                - recv_endswith: use for stop receiving, default is ['# ', '$ ', ': ', '? ']
+                - timeout: timeout on blocking read/write operations & socket timer, default is 0
+                - connect_kwargs: kwargs for Transport.connect()
         """
         self._username = username
         self._password = password
-
+        self._secondary_password = kwargs.pop('secondary_password', None)  # for enable/sudo
+        # recv_endswith = kwargs.pop('recv_endswith', None)  # for stop receiving
+        self.recv_endswith = tuple(kwargs.pop('recv_endswith', None) or ['# ', '$ ', ': ', '? '])  # for stop receiving
         self._timeout = kwargs.pop('timeout', 0)
-        self.transport = paramiko.Transport(_create_socket(hostname=hostname, port=port, timeout=self._timeout))
+
         # self.transport = paramiko.Transport((hostname, port))
-        self.transport.connect(username=username, password=password, **kwargs)
+        self.transport = paramiko.Transport(_create_socket(hostname=hostname, port=port, timeout=self._timeout))
+        _connect_kwargs = kwargs.pop('connect_kwargs', None) or {}  # kwargs for Transport.connect()
+        self.transport.connect(username=username, password=password, **_connect_kwargs)
 
         self.ssh = paramiko.SSHClient()
         self.ssh._transport = self.transport
@@ -69,15 +97,20 @@ class SSH(object):
         Run the command.
 
         Example:
-            ssh.run_command("ls -l")
+            ssh.run_command('ls -l')
+            ssh.run_command('show run')
         """
         command = command.strip()
         self.channel.send(command + '\n')
         output = self._get_output(command)
-
-        if self._password and command.lower().startswith('sudo') and 'assword' in output:  # input password
-            pwd_output = self.run_command(self._password)
-            if 'assword' in pwd_output:
+        enable_commands = ('sudo', 'enable')
+        secondary_password = self._secondary_password  # or self._password
+        if secondary_password and \
+                command.lower().startswith(enable_commands) and \
+                'assword' in output:  # input password
+            pwd_output = self.run_command(secondary_password)
+            # if 'assword' in pwd_output:
+            if pwd_output == output:
                 return output
             return self.run_command(command)
 
@@ -109,7 +142,7 @@ class SSH(object):
         Return the local files list.
 
         Example:
-            ssh.sftp_get_dir("/usr/projects/git/srte/src/", "/Users/taozh/Work/Codes/ssh_test/sftp")
+            ssh.sftp_get_dir('/usr/projects/git/srte/src/', '/Users/taozh/Work/Codes/ssh_test/sftp')
         """
         if not self._path_exists(remote_dir):
             return False
@@ -133,7 +166,7 @@ class SSH(object):
         List all files in the given path.
 
         Example:
-            ssh.listdir("/usr/projects/git/srte/src/")
+            ssh.listdir('/usr/projects/git/srte/src/')
         """
         all_files = []
         path = _remove_end_slash(path)
@@ -177,13 +210,14 @@ class SSH(object):
         res_list = []
         time.sleep(0.2)  # Solve the problem of incomplete data
         # cmd_pattern = re.compile('.*[#$] ' + command) # Does not work with password entry
+
         while True:
             data = self.channel.recv(1024)
             info = data.decode()
             res = info.replace(' \r', '')
             res_list.append(res)
             if len(info) < 1024:  # read speed > write speed
-                if info.endswith(('# ', '$ ', ': ', '? ')):
+                if info.endswith(self.recv_endswith):  # Cisco C9300:# /
                     break
 
         return ''.join(res_list)
@@ -199,24 +233,24 @@ def _create_socket(hostname, port, timeout=0):
     :param timeout:
     :return:
     """
-    reason = "No suitable address family"
+
+    reason = 'No suitable address family'
     addrinfos = socket.getaddrinfo(hostname, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
     for family, socktype, proto, canonname, sockaddr in addrinfos:
         if socktype == socket.SOCK_STREAM:
             sock = socket.socket(family, socket.SOCK_STREAM)
             if timeout > 0:
                 sock.settimeout(timeout)
-            now = datetime.now()
             try:
-                retry_on_signal(lambda: sock.connect((hostname, port)))
+                # retry_on_signal(lambda: sock.connect((hostname, port))) # @2023-06-09 change, remove paramiko.util.retry_on_signal(Paramiko3.0.0 2023-01-20)
+                sock.connect((hostname, port))
             except socket.error as e:
                 reason = str(e)
-                print(datetime.now() - now)
             else:
                 break
     else:
         raise SSHException(
-            "Unable to connect to {}: {}".format(hostname, reason)
+            'Unable to connect to {}: {}'.format(hostname, reason)
         )
     return sock
 
@@ -235,7 +269,7 @@ def _clear_redundant(txt, command):
         txt = txt[len(command):].lstrip()
 
     # remove text before command ex) [root@localhost ~]# ls -l
-    cmd_pattern = re.compile('.*([#$])?( )*' + re.escape(command))
+    cmd_pattern = re.compile('.*([#$])( )*' + re.escape(command))  # @2023-06-07 change ([#$])? --> ([#$])
     last_match = None
     for match in cmd_pattern.finditer(txt):
         last_match = match
@@ -256,12 +290,20 @@ def _remove_end_slash(path):
 
 if __name__ == '__main__':
     servers = [
-        {  # Centos
-            'host': '10.124.4.21',
-            'username': 'admin1',
-            'password': 'Cisco@123',
-            'commands': ['show int eth3/1']
-        },
+        # {  # C9300
+        #     'host': '10.75.37.165',
+        #     'username': 'admin',
+        #     'password': 'Cisco123',
+        #     # 'secondary_password': 'Cisco123',
+        #     'recv_endswith': ['# ', '$ ', ': ', '? ', '#'],
+        #     'commands': ['enable', 'Cisco123', 'show run']
+        # },
+        # {  # Centos
+        #     'host': '10.124.4.21',
+        #     'username': 'admin1',
+        #     'password': 'Cisco@123',
+        #     'commands': ['show int eth3/1']
+        # },
         # {  # Centos
         #     'host': '10.124.5.222',
         #     'username': 'root',
@@ -274,12 +316,13 @@ if __name__ == '__main__':
         #     'password': 'Cisco@123',
         #     'commands': ['ls -l']
         # },
-        # {  # Ubuntu, test input password
-        #     'host': '10.124.205.216',
-        #     'username': 'cisco',
-        #     'password': 'cisco123',
-        #     'commands': ['sudo ls -l']
-        # },
+        {  # Ubuntu, test input password
+            'host': '10.124.5.216',
+            'username': 'cisco',
+            'password': 'cisco123',
+            'secondary_password': 'cisco123',
+            'commands': ['sudo ls -l']
+        },
         # {  # NX-OS
         #     'host': '10.124.11.134',
         #     'username': 'admin',
@@ -294,9 +337,10 @@ if __name__ == '__main__':
         # }
     ]
     for item in servers:
-        print((item.get('host') + " : " + str(item.get("commands"))).center(100, '*'))
-        with ssh_session(item.get('host'), item.get('username'), item.get('password'), timeout=10) as ssh:
+        print((item.get('host') + ' : ' + str(item.get('commands'))).center(100, '*'))
+        with ssh_session(item.get('host'), item.get('username'), item.get('password'), timeout=10, recv_endswith=item.get('recv_endswith'),
+                         secondary_password=item.get('secondary_password')) as ssh:
             print(ssh.run_command_list(item.get('commands'), True))
 
-    # ssh.sftp_get_dir("/usr/projects/git/srte/src/", "/Users/taozh/Work/Codes/ssh_test/sftp")
+    # ssh.sftp_get_dir('/usr/projects/git/srte/src/', '/Users/taozh/Work/Codes/ssh_test/sftp')
     print('\n', 'end'.center(100, '-'))

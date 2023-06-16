@@ -13,6 +13,12 @@
 
 ## 版本
 
+- **1.6** `2023/06/16`
+    - [A] `BaseModelMixin`添加`count`方法，用于数量查询(全量/条件)
+    - [A] `BaseModelMixin`添加`clear_db`方法，用于清空数据
+    - [A] `BaseModelMixin.query_pss`方法支持`GROUP BY`分组
+    - [A] `flaskz.ext.ssh`添加对Paramiko>=3.0.0版本的支持
+    - [A] `flaskz.ext.ssh`添加`secondary_password`和`recv_endswith`参数
 - **1.5.3** `2023/06/01`
     - [F] `flaskz.util.api_request`函数的`url_params`参数仅用于url中的`{变量}`替换而不添加查询字符串
     - [A] `flaskz.util.api_request`函数添加`url_search_params`参数用于添加url查询字符串
@@ -20,7 +26,7 @@
     - [C] `db_session`上下文管理器自动关闭非缓存session
     - [F] 修复`BaseModelMixin.get_query_default_order`默认排序在`query_pss`方法中不起作用的问题
 - **1.5** `2023/05/01`
-    - [A] 重构`flaskz.rest`路由生成模块*
+    - [A] 扩展`flaskz.rest`路由生成模块*
         - 添加`register_model_route`函数，可用于生成指定数据模型的CRUD等路由
         - 添加`register_model_add_route`函数，可用于生成指定数据模型的添加路由
         - 添加`register_model_delete_route`函数，可用于生成指定数据模型的删除路由
@@ -35,7 +41,7 @@
     - [A] `flaskz.utils`添加`cls_to_dict`函数, 用于生成类属性的dict对象
     - [C] `BaseModelMixin.bulk_delete`方法会删除符合条件的所有数据(此前版本只删除第一个)
 - **1.3.1** `2023/03/02`
-    - [C] `init_model_rest_blueprint`函数生成的路由, 移除参数`path`类型转换, 以解决<2.2.3版本的Flask不会将结尾不带`/`的请求重定向到带`/`路由的问题
+    - [C] `init_model_rest_blueprint`函数生成的路由, 移除参数`path`类型转换, 以解决Flask<2.2.3版本不会将结尾不带`/`的请求重定向到带`/`路由的问题
 - **1.3** `2023/03/01`
     - [A] `init_model_rest_blueprint`函数生成的query路由, 添加对单个数据的查询功能(`[GET]url_prefix/did/`)
     - [A] `init_model_rest_blueprint`函数生成的update路由, 添加URL主键支持(`[PATCH]url_prefix/did/`)

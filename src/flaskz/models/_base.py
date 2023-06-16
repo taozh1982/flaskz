@@ -473,11 +473,12 @@ class BaseModelMixin:
             User.bulk_delete([{'id': 1}, {'id': 2}, {'id': 3}]) # dict list
 
         :param items:
-        :return:
+        :return: the deleted count
         """
         if len(items) == 0:
             return
         pk = cls.get_primary_field()
+        count = 0
         with db_session() as session:
             pk_list = []
             for item in items:
@@ -491,7 +492,23 @@ class BaseModelMixin:
                     pk_list.append(item)
             # @2022-11-03: Use 'where' and 'in' to rewrite bulk delete to avoid partial delete scenarios
             if len(pk_list) > 0:
-                session.query(cls).filter(getattr(cls, pk).in_(pk_list)).delete()
+                count = session.query(cls).filter(getattr(cls, pk).in_(pk_list)).delete()
+        return count
+
+    @classmethod
+    def clear_db(cls):
+        """
+        Clear all the data.
+
+        .. versionadded:: 1.6
+
+        Example:
+            SysActionLog.clear_db()
+
+        :return: the deleted count
+        """
+        with db_session() as session:
+            return session.query(cls).delete()
 
     # -------------------------------------------query-------------------------------------------
 
@@ -661,11 +678,54 @@ class BaseModelMixin:
         :param pss_option:
         :return:
         """
+        return cls._query_pss(pss_option)
+
+    @classmethod
+    def count(cls, search=None):
+        """
+        Return the count of the specified search, if search option is None, return the count of all data.
+
+        .. versionadded:: 1.6
+
+        Example:
+            SysActionLog.count()
+            SysActionLog.count(get_pss(   # use flaskz.utils.get_pss to format condition
+                TemplateModel, {   # FROM templates
+                    "search": {                         # WHERE
+                        "like": "t",                    # name like '%t%' OR description like '%t%' (TemplateModel.like_columns = ['name', description])
+                        "age": {                        # AND (age>1 AND age<20)
+                            ">": 1,                     # operator:value, operators)'='/'>'/'<'/'>='/'<='/'BETWEEN'/'LIKE'/'IN'
+                            "<": 20
+                        },
+                        "email": "taozh@focus-ui.com",  # AND (email='taozh@focus-ui.com')
+                        "_ors": {                       # AND (country='America' OR country='Canada')
+                            "country": "America||Canada"
+                        },
+                        "_ands": {                      # AND (grade>1 AND grade<5)
+                            "grade": {
+                                ">": 1,
+                                "<": 5
+                            }
+                        }
+                    }
+                }))
+        :param search: the search option
+        :return: the count number
+        """
+        return cls._query_pss(search, True)
+
+    @classmethod
+    def _query_pss(cls, pss_option, return_count=False):
+        pss_option = pss_option or {}
         filter_likes = pss_option.get('filter_likes', [])
         filter_ands = pss_option.get('filter_ands', [])
         filter_ors = pss_option.get('filter_ors', [])
+
+        group = pss_option.get('group', [])
+
         offset = max(get_dict_value_by_type(pss_option, 'offset', int, 0), 0)  # @2023-01-09 update, add type check
         limit = max(get_dict_value_by_type(pss_option, 'limit', int, 0), 0)
+        # distinct = pss_option.get('distinct', [])
 
         orders = pss_option.get('order')
         if orders is None:
@@ -679,13 +739,25 @@ class BaseModelMixin:
 
         with db_session(do_commit=False) as session:
             query = session.query(cls)
+
             if len(filter_likes) > 0:
                 query = query.filter(text('(' + (' OR '.join(filter_likes)) + ')'))
             if len(filter_ands) > 0:
                 query = query.filter(text('(' + (' AND '.join(filter_ands)) + ')'))
             if len(filter_ors) > 0:
                 query = query.filter(text('(' + (' OR '.join(filter_ors)) + ')'))
+
+            # if len(distinct) > 0:
+            #     query.distinct(*distinct)
+
+            if len(group) > 0:  # @2023-06-07 add
+                query = query.group_by(*group)
+
             count = query.count()
+
+            if return_count is True:
+                return count
+
             if count > 0 and offset < count:
                 # for order in orders:
                 #     if order is not None:

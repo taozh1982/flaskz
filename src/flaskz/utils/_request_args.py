@@ -95,6 +95,8 @@ def get_pss(cls, pss_config=None):
     search = pss_config.get('search') or {}
     ands = []
     ors = []
+
+    # select
     search_like = search.pop('like', None)
     like_columns = getattr(cls, 'like_columns', None)
     likes = []
@@ -121,6 +123,31 @@ def get_pss(cls, pss_config=None):
 
     for key in search:
         _append_item(ands, key, search[key], columns_fields)
+
+    # distinct = []  # @2023-06-07 add
+    # _distinct = search.pop('_distinct', None)
+    # if _distinct:
+    #     if is_str(_distinct):
+    #         _distinct = [_distinct]
+    #
+    #     if is_list(_distinct):
+    #         for distinct_item in _distinct:
+    #             distinct_column = cls.get_column_by_field(distinct_item)
+    #             if distinct_column is not None:
+    #                 distinct.append(distinct_column)
+
+    # --------------------group--------------------
+    groups = []  # @2023-06-07 add
+    _groups = pss_config.get('group', None)
+    if _groups:
+        if is_str(_groups):
+            _groups = [_groups]
+        if is_list(_groups):
+            for group_item in _groups:
+                group_column = cls.get_column_by_field(group_item)
+                if group_column is not None:
+                    groups.append(group_column)
+
     # --------------------page--------------------
     page = pss_config.get('page') or {}
     offset = page.get('offset') or page.get('skip') or 0
@@ -186,10 +213,28 @@ def get_pss(cls, pss_config=None):
         'offset': offset,
         'limit': limit,
         'order': orders,
+        'group': groups
+        # 'distinct': distinct
     }
 
 
 def _append_item(items, key, value, columns_fields):  # @2023-02-06 add columns_fields args to fix "Unknown column 'col' in 'where clause'"
+    """
+    Create sql text
+    - if need '' in sql, add in value ex) "'abc'"
+
+    :param items:
+    :param key:
+    :param value:
+    :param columns_fields:
+    :return:
+
+    :param items:
+    :param key:
+    :param value:
+    :param columns_fields:
+    :return:
+    """
     if columns_fields and (key not in columns_fields):
         return items
 
@@ -199,10 +244,10 @@ def _append_item(items, key, value, columns_fields):  # @2023-02-06 add columns_
             if value != '':
                 val_arr = value.split('||')
                 for op_v in val_arr:
-                    items.append(key + "='" + op_v + "'")
+                    items.append(key + " = '" + op_v + "'")
         elif is_dict(value):
             for operator, op_v in value.items():
-                items.append(key + operator + str(op_v))
+                items.append(key + ' ' + operator + ' ' + str(op_v))  # @2023-06-15 add blank, "in":"('a','b','c')"/ "like":"'%a'"
         else:
-            items.append(key + '=' + str(value))
+            items.append(key + ' = ' + str(value))
     return items

@@ -5,7 +5,7 @@ from flaskz import res_status_codes
 
 from ..log import flaskz_logger, get_log_data
 from ..models import model_to_dict, query_all_models, ModelMixin
-from ..utils import get_list, is_dict, create_response, get_pss
+from ..utils import get_list, is_dict, create_response, get_pss, get_request_json
 
 
 def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, routers=None, to_json_option=None, multiple_option=None):
@@ -336,7 +336,7 @@ def register_model_query_pss_route(app, model, rule, module=None, action=None, m
     @rest_permission_required(module, action)
     @gen_route_method('query_pss', rule)
     def query_pss():
-        request_json = request.json
+        request_json = get_request_json({})  # @2023-06-15, request.json --> get_request_json({})
         req_log_data = json.dumps(request_json)
 
         success, data = model.query_pss(get_pss(model, request_json))
