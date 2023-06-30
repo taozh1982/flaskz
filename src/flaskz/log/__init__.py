@@ -27,18 +27,21 @@ def init_log(app):
     global _flaskz_logger
     _flaskz_logger = logging.getLogger('flaskz_logger')
     _flaskz_logger.setLevel(level)
-    filename = app_config.get('FLASKZ_LOGGER_FILENAME')
 
-    if filename is not None:
-        filepath = os.path.join(app_config.get('FLASKZ_LOGGER_FILEPATH') or os.path.join(os.getcwd(), './syslog'), filename)
-        log_handler = TimedRotatingFileHandler(
-            encoding='utf-8',
-            filename=filepath,
-            when=app_config.get('FLASKZ_LOGGER_WHEN'),
-            interval=1,
-            backupCount=int(app_config.get('FLASKZ_LOGGER_BACKUP_COUNT')))
-    else:
-        log_handler = logging.StreamHandler()
+    log_handler = app_config.get('FLASKZ_LOGGER_HANDLER')
+    if log_handler is None:
+        filename = app_config.get('FLASKZ_LOGGER_FILENAME')
+
+        if filename is not None:
+            filepath = os.path.join(app_config.get('FLASKZ_LOGGER_FILEPATH') or os.path.join(os.getcwd(), './syslog'), filename)
+            log_handler = TimedRotatingFileHandler(
+                encoding='utf-8',
+                filename=filepath,
+                when=app_config.get('FLASKZ_LOGGER_WHEN'),
+                interval=1,
+                backupCount=int(app_config.get('FLASKZ_LOGGER_BACKUP_COUNT')))
+        else:
+            log_handler = logging.StreamHandler()
 
     log_handler.setLevel(level)
     log_handler.setFormatter(formatter)

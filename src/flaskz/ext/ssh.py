@@ -92,27 +92,45 @@ class SSH(object):
                 self._channel.settimeout(self._timeout)
         return self._channel
 
-    def run_command(self, command):
+    def run_command(self, command, recv=True):
         """
         Run the command.
+        If recv is False, just run the command and return immediately, without waiting for the result
+
+        .. versionupdated:: 1.6.1   - @2023-06-26 add recv parameter
 
         Example:
             ssh.run_command('ls -l')
             ssh.run_command('show run')
+
+         :param command: the command to run.
+         :param recv: wait for the result or not.
+
+         :return: the output of the command
         """
-        command = command.strip()
-        self.channel.send(command + '\n')
-        output = self._get_output(command)
+        if type(command) is dict:
+            _command = command.get('command')
+            _recv = command.get('recv') is not False
+        else:
+            _command = command
+            _recv = recv
+
+        _command = _command.strip()
+        self.channel.send(_command + '\n')
+        if _recv is False:
+            return None
+
+        output = self._get_output(_command)
         enable_commands = ('sudo', 'enable')
         secondary_password = self._secondary_password  # or self._password
         if secondary_password and \
-                command.lower().startswith(enable_commands) and \
+                _command.lower().startswith(enable_commands) and \
                 'assword' in output:  # input password
             pwd_output = self.run_command(secondary_password)
             # if 'assword' in pwd_output:
             if pwd_output == output:
                 return output
-            return self.run_command(command)
+            return self.run_command(_command)
 
         return output
 
@@ -128,6 +146,11 @@ class SSH(object):
                       'wiui@hotmail.com',
                       '11111111'
                       ], True)
+
+         :param command_list: the command list to run.
+         :param last_result: if True, return the result of the last command, otherwise, return the result list
+
+         :return: command output result(list/last)
         """
         re_list = []
         for command in command_list:
@@ -279,68 +302,3 @@ def _clear_redundant(txt, command):
     txt = path_pattern.sub('', txt)  # remove the path info
     txt = txt.replace(command + '\r\n', '')  # remove the command
     return txt.strip()
-
-
-def _remove_end_slash(path):
-    """Remove ending slash """
-    if path[-1] == '/':
-        return path[0:-1]
-    return path
-
-
-if __name__ == '__main__':
-    servers = [
-        # {  # C9300
-        #     'host': '10.75.37.165',
-        #     'username': 'admin',
-        #     'password': 'Cisco123',
-        #     # 'secondary_password': 'Cisco123',
-        #     'recv_endswith': ['# ', '$ ', ': ', '? ', '#'],
-        #     'commands': ['enable', 'Cisco123', 'show run']
-        # },
-        # {  # Centos
-        #     'host': '10.124.4.21',
-        #     'username': 'admin1',
-        #     'password': 'Cisco@123',
-        #     'commands': ['show int eth3/1']
-        # },
-        # {  # Centos
-        #     'host': '10.124.5.222',
-        #     'username': 'root',
-        #     'password': 'cisco123',
-        #     'commands': ['ls -l', 'cd ../opt', '\cp a.txt b.txt']
-        # },
-        # {  # Ubuntu
-        #     'host': '10.124.5.198',
-        #     'username': 'root',
-        #     'password': 'Cisco@123',
-        #     'commands': ['ls -l']
-        # },
-        {  # Ubuntu, test input password
-            'host': '10.124.5.216',
-            'username': 'cisco',
-            'password': 'cisco123',
-            'secondary_password': 'cisco123',
-            'commands': ['sudo ls -l']
-        },
-        # {  # NX-OS
-        #     'host': '10.124.11.134',
-        #     'username': 'admin',
-        #     'password': 'Cisco@123',
-        #     'commands': ['show version', 'show running-config']
-        # },
-        # {  # NX-OS
-        #     'host': '10.66.94.62',
-        #     'username': 'admin',
-        #     'password': 'cisco!123',
-        #     'commands': ['show version', 'show running-config']
-        # }
-    ]
-    for item in servers:
-        print((item.get('host') + ' : ' + str(item.get('commands'))).center(100, '*'))
-        with ssh_session(item.get('host'), item.get('username'), item.get('password'), timeout=10, recv_endswith=item.get('recv_endswith'),
-                         secondary_password=item.get('secondary_password')) as ssh:
-            print(ssh.run_command_list(item.get('commands'), True))
-
-    # ssh.sftp_get_dir('/usr/projects/git/srte/src/', '/Users/taozh/Work/Codes/ssh_test/sftp')
-    print('\n', 'end'.center(100, '-'))

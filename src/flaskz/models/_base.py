@@ -307,7 +307,7 @@ class BaseModelMixin:
         Add data to the db.
 
         Example:
-            User.add_db({"name": "taozh", "email": "taozh@focus-ui.com"})
+            ins = User.add_db({"name": "taozh", "email": "taozh@focus-ui.com"})
 
         :param data:
         :return:
@@ -369,7 +369,7 @@ class BaseModelMixin:
         Only the fields in data will be updated.
 
         Example:
-            User.update_db({"id": 1, "email": "taozh@focus-ui.com"})
+            ins = User.update_db({"id": 1, "email": "taozh@focus-ui.com"})
 
         :param data:
         :return:
@@ -443,8 +443,8 @@ class BaseModelMixin:
         Delete the specified data with the specified primary key value.
 
         Example:
-            User.delete_db(1)   # pk
-            User.delete_db({'id': 1})   # dict
+            ins = User.delete_db(1)   # pk
+            ins = User.delete_db({'id': 1})   # dict
 
         :param pk_value:
         :return:
@@ -546,7 +546,7 @@ class BaseModelMixin:
         --Otherwise,returns None
 
         Example:
-            User.query_by_unique_key(data)
+            ins = User.query_by_unique_key(data)
 
         :param data:
         :return:
@@ -576,7 +576,7 @@ class BaseModelMixin:
         Query by pk value.
 
         Example:
-            User.query_by_pk(1)
+            ins = User.query_by_pk(1)
 
         :param pk_value:
         :return:
@@ -593,8 +593,8 @@ class BaseModelMixin:
         -If first is True, return the first row object or None.
 
         Example:
-            User.query_by({'name': 'flaskz'})   # list
-            User.query_by({'name': 'flaskz'}, True) # first row
+            ins_list = User.query_by({'name': 'flaskz'})   # list
+            ins = User.query_by({'name': 'flaskz'}, True) # first row
 
         """
         with db_session(do_commit=False) as session:
@@ -610,7 +610,7 @@ class BaseModelMixin:
         Query all the data of the model class.
 
         Example:
-            User.query_all()
+            ins_list = User.query_all()
 
         :return:
         """
@@ -630,7 +630,7 @@ class BaseModelMixin:
         pss = page+search+sort
 
         Example:
-            result, result = TemplateModel.query_pss(get_pss(   # use flaskz.utils.get_pss to format condition
+            result = TemplateModel.query_pss(get_pss(   # use flaskz.utils.get_pss to format condition
                 TemplateModel, {   # FROM templates
                     "search": {                         # WHERE
                         "like": "t",                    # name like '%t%' OR description like '%t%' (TemplateModel.like_columns = ['name', description])
@@ -740,12 +740,15 @@ class BaseModelMixin:
         with db_session(do_commit=False) as session:
             query = session.query(cls)
 
-            if len(filter_likes) > 0:
-                query = query.filter(text('(' + (' OR '.join(filter_likes)) + ')'))
-            if len(filter_ands) > 0:
-                query = query.filter(text('(' + (' AND '.join(filter_ands)) + ')'))
-            if len(filter_ors) > 0:
-                query = query.filter(text('(' + (' OR '.join(filter_ors)) + ')'))
+            query = append_query_filter(query, filter_likes, 'or')
+            query = append_query_filter(query, filter_ands, 'and')
+            query = append_query_filter(query, filter_ors, 'or')
+            # if len(filter_likes) > 0:
+            #     query = query.filter(text('(' + (' OR '.join(filter_likes)) + ')'))
+            # if len(filter_ands) > 0:
+            #     query = query.filter(text('(' + (' AND '.join(filter_ands)) + ')'))
+            # if len(filter_ors) > 0:
+            #     query = query.filter(text('(' + (' OR '.join(filter_ors)) + ')'))
 
             # if len(distinct) > 0:
             #     query.distinct(*distinct)
@@ -832,4 +835,4 @@ class BaseModelMixin:
 
 
 # must
-from ._util import create_instance, create_relationships, db_session
+from ._util import create_instance, create_relationships, db_session, append_query_filter

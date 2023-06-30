@@ -54,6 +54,9 @@ class ModelMixin(BaseModelMixin):
            --the first value represents whether the add operation was successful, True/False.
            --the second value represent the result of the add operation, reason/instance.
 
+        Example:
+            success, ins = User.add({"name": "taozh", "email": "taozh@focus-ui.com"})
+
         :param data:
         :return:
         """
@@ -119,6 +122,9 @@ class ModelMixin(BaseModelMixin):
         Returns a tuple.
            --the first value represents whether the update operation was successful, True/False.
            --the second value represent the result of the update operation, reason/instance.
+
+        Example:
+            success, ins = User.update({"id": 1, "email": "taozh@focus-ui.com"})
 
         :param data:
         :return:
@@ -186,6 +192,10 @@ class ModelMixin(BaseModelMixin):
            --the first value represents whether the delete operation was successful, True/False.
            --the second value represent the result of the delete operation, reason/instance.
 
+        Example:
+            success, ins =  User.delete(1)
+            success, ins =  User.delete({'id': 1})
+
         :param pk_value:
         :return:
         """
@@ -221,6 +231,9 @@ class ModelMixin(BaseModelMixin):
         Override the base query_all method and return success flag.
         Used in router to return query data.
 
+        Example:
+            success, ins_list = User.query_all()
+
         :return:
         """
         try:
@@ -234,6 +247,40 @@ class ModelMixin(BaseModelMixin):
         """
         Override the base query_pss method and return success flag.
         Used in router to return query data.
+
+        Example:
+            result, ins_list = TemplateModel.query_pss(get_pss(   # use flaskz.utils.get_pss to format condition
+                TemplateModel, {   # FROM templates
+                    "search": {                         # WHERE
+                        "like": "t",                    # name like '%t%' OR description like '%t%' (TemplateModel.like_columns = ['name', description])
+                        "age": {                        # AND (age>1 AND age<20)
+                            ">": 1,                     # operator:value, operators)'='/'>'/'<'/'>='/'<='/'BETWEEN'/'LIKE'/'IN'
+                            "<": 20
+                        },
+                        "email": "taozh@focus-ui.com",  # AND (email='taozh@focus-ui.com')
+                        "_ors": {                       # AND (country='America' OR country='Canada')
+                            "country": "America||Canada"
+                        },
+                        "_ands": {                      # AND (grade>1 AND grade<5)
+                            "grade": {
+                                ">": 1,
+                                "<": 5
+                            }
+                        }
+                    },
+                    "sort": {                           # ORDER BY templates.name ASC
+                        "field": "name",
+                        "order": "asc"
+                    },
+                    # "sort":[                          # ORDER BY templates.name ASC, templates.age DESC
+                    #     {"field": "name", "order": "asc"},
+                    #     {field": "age", "order": "desc"}
+                    # ],
+                    "page": {                           # LIMIT ? OFFSET ? (20, 0)
+                        "offset": 0,
+                        "size": 20
+                    }
+                }))
 
         :param pss_option:
         :return:

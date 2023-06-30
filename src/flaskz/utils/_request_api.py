@@ -128,6 +128,7 @@ def forward_request(url, payload=None, raw_response=False, error_code=500, **kwa
             req_kwargs[item] = request.get_json(force=True, silent=True)
         else:
             req_kwargs[item] = getattr(request, item, None)
+    req_kwargs['params'] = request.args  # @2022-06-25 add query string
     req_kwargs.update(kwargs)  # kwargs high priority
 
     url_params = req_kwargs.get('url_params')

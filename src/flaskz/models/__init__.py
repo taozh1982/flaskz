@@ -128,5 +128,6 @@ def init_model(app):
 from ._base import *
 from ._model import *
 from ._util import *
+from ._query_util import *
 
 from ..utils import get_app_config_items

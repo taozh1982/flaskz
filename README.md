@@ -13,28 +13,31 @@
 
 ## 版本
 
+- **1.6.1** `2023/07/01`
+    - [C] `flaskz.utils.get_pss`(`flaskz.models.parse_pss`)函数返回项由SQL字符串拼接改为参数化模式以预防SQL注入
+    - [A] 添加`flaskz.utils.run_at`函数用于执行定时函数
 - **1.6** `2023/06/16`
-    - [A] `BaseModelMixin`添加`count`方法，用于数量查询(全量/条件)
-    - [A] `BaseModelMixin`添加`clear_db`方法，用于清空数据
+    - [A] `BaseModelMixin`添加`count`方法, 用于数量查询(全量/条件)
+    - [A] `BaseModelMixin`添加`clear_db`方法, 用于清空数据
     - [A] `BaseModelMixin.query_pss`方法支持`GROUP BY`分组
     - [A] `flaskz.ext.ssh`添加对Paramiko>=3.0.0版本的支持
     - [A] `flaskz.ext.ssh`添加`secondary_password`和`recv_endswith`参数
 - **1.5.3** `2023/06/01`
-    - [F] `flaskz.util.api_request`函数的`url_params`参数仅用于url中的`{变量}`替换而不添加查询字符串
-    - [A] `flaskz.util.api_request`函数添加`url_search_params`参数用于添加url查询字符串
+    - [F] `flaskz.utils.api_request`函数的`url_params`参数仅用于url中的`{变量}`替换而不添加查询字符串
+    - [A] `flaskz.utils.api_request`函数添加`url_search_params`参数用于添加url查询字符串
 - **1.5.2** `2023/05/17`
     - [C] `db_session`上下文管理器自动关闭非缓存session
     - [F] 修复`BaseModelMixin.get_query_default_order`默认排序在`query_pss`方法中不起作用的问题
 - **1.5** `2023/05/01`
     - [A] 扩展`flaskz.rest`路由生成模块*
-        - 添加`register_model_route`函数，可用于生成指定数据模型的CRUD等路由
-        - 添加`register_model_add_route`函数，可用于生成指定数据模型的添加路由
-        - 添加`register_model_delete_route`函数，可用于生成指定数据模型的删除路由
-        - 添加`register_model_update_route`函数，可用于生成指定数据模型的更新路由
-        - 添加`register_model_upsert_route`函数，可用于生成指定数据模型的添加/更新路由
-        - 添加`register_model_query_route`函数，可用于生成指定数据模型的全量查询路由
-        - 添加`register_model_query_pss_route`函数，可用于生成指定数据模型的条件查询(分页+搜索+排序)路由
-        - 添加`register_models_query_route`函数，可用于生成多个数据模型的全量查询路由
+        - 添加`register_model_route`函数, 可用于生成指定数据模型的CRUD等路由
+        - 添加`register_model_add_route`函数, 可用于生成指定数据模型的添加路由
+        - 添加`register_model_delete_route`函数, 可用于生成指定数据模型的删除路由
+        - 添加`register_model_update_route`函数, 可用于生成指定数据模型的更新路由
+        - 添加`register_model_upsert_route`函数, 可用于生成指定数据模型的添加/更新路由
+        - 添加`register_model_query_route`函数, 可用于生成指定数据模型的全量查询路由
+        - 添加`register_model_query_pss_route`函数, 可用于生成指定数据模型的条件查询(分页+搜索+排序)路由
+        - 添加`register_models_query_route`函数, 可用于生成多个数据模型的全量查询路由
     - [A] `ModelMixin.query_pss`方法支持多列排序*
     - [A] `flaskz.models.init_model`和`flaskz.log.init_log`函数添加对`Class`类型参数的支持
     - [A] `BaseModelMixin.delete_db`方法添加对`dict`类型参数的支持

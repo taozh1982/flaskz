@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 
 from flask import g
+from sqlalchemy import text, or_, and_
 
 from . import DBSession
 from ._base import BaseModelMixin
@@ -226,3 +227,40 @@ def _has_g_context():
         return False
     return True
     # return has_request_context() or g is not None
+
+
+def append_query_filter(query, filters, joined):  # @2023-06-21 add
+    """
+    Append filters to the query
+    :param query:
+    :param filters:
+    :param joined:
+    :return:
+    """
+    if len(filters) == 0:
+        return query
+    joined = joined.lower()
+    if joined == 'or':
+        joined_text = ' OR '
+        joined_func = or_
+    elif joined == 'and':
+        joined_text = ' AND '
+        joined_func = and_
+    else:
+        return query
+
+    text_items = []
+    binary_expression_items = []
+    for item in filters:
+        if type(item) is str:
+            text_items.append(item)
+        else:
+            binary_expression_items.append(item)
+
+    if len(text_items) > 0:
+        query = query.filter(text('(' + (joined_text.join(text_items)) + ')'))
+
+    if len(binary_expression_items) > 0:
+        query = query.filter(joined_func(*binary_expression_items))
+
+    return query
