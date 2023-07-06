@@ -43,4 +43,4 @@ def get_request_json(*args):
     return data
 
 
-from ..models import parse_pss as get_pss
+from ..models._query_util import parse_pss as get_pss

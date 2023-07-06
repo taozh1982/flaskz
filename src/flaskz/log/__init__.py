@@ -71,4 +71,4 @@ def _log_data_converter(value):
         return value.__str__()
 
 
-from ..utils import get_app_config_items
+from ..utils._app import get_app_config_items

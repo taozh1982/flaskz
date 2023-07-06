@@ -13,6 +13,8 @@
 
 ## 版本
 
+- **1.6.2** `2023/07/06`
+    - [F] 修复`flaskz.utils._request_args.py`中`import parse_pss as get_pss`的导入问题
 - **1.6.1** `2023/07/01`
     - [C] `flaskz.utils.get_pss`(`flaskz.models.parse_pss`)函数返回项由SQL字符串拼接改为参数化模式以预防SQL注入
     - [A] 添加`flaskz.utils.run_at`函数用于执行定时函数

@@ -1,7 +1,8 @@
 from sqlalchemy import text, Integer, Numeric
 
 from .. import res_status_codes
-from ..utils import find_list, filter_list, is_str, is_dict, is_list, ins_to_dict, get_dict_value_by_type
+from ..utils._cls import ins_to_dict
+from ..utils._common import find_list, filter_list, is_str, is_dict, is_list, get_dict_value_by_type
 
 __all__ = ['BaseModelMixin']
 

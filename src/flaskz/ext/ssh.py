@@ -298,7 +298,14 @@ def _clear_redundant(txt, command):
         last_match = match
     if last_match:
         txt = txt[last_match.end():]
-    path_pattern = re.compile('.*[#$] ')
+    path_pattern = re.compile('.*[#$]( )?')  # @2023-07-06 change '.*[#$] ' --> '.*[#$]( )?'
     txt = path_pattern.sub('', txt)  # remove the path info
     txt = txt.replace(command + '\r\n', '')  # remove the command
     return txt.strip()
+
+
+def _remove_end_slash(path):
+    """Remove ending slash """
+    if path[-1] == '/':
+        return path[0:-1]
+    return path

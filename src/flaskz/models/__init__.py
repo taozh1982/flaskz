@@ -9,9 +9,6 @@ from sqlalchemy.engine import ExceptionContext
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from ..log import flaskz_logger
-from ..utils import Attribute
-
 DBSession = sessionmaker(autocommit=False)
 
 ModelBase = declarative_base()
@@ -130,4 +127,6 @@ from ._model import *
 from ._util import *
 from ._query_util import *
 
-from ..utils import get_app_config_items
+from ..utils._cls import Attribute
+from ..utils._app import get_app_config_items
+from ..log import flaskz_logger
