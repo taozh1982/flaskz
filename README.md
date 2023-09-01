@@ -13,6 +13,10 @@
 
 ## 版本
 
+- **1.6.3** `2023/09/01`
+    - [A] 添加`FLASKZ_DATABASE_SESSION_KWARGS`参数, 用于自定义`DBSession`参数
+    - [C] `BaseModelMixin.add_db`和`BaseModelMixin.update_db`方法添加`refresh`操作, 以返回跟数据库同步的instance对象
+    - [A] `flaskz.rest.register_model_*`路由生成函数添加路由`endpoint`参数
 - **1.6.2** `2023/07/06`
     - [F] 修复`flaskz.utils._request_args.py`中`import parse_pss as get_pss`的导入问题
 - **1.6.1** `2023/07/01`
@@ -51,7 +55,7 @@
     - [A] `init_model_rest_blueprint`函数生成的query路由, 添加对单个数据的查询功能(`[GET]url_prefix/did/`)
     - [A] `init_model_rest_blueprint`函数生成的update路由, 添加URL主键支持(`[PATCH]url_prefix/did/`)
     - [C] `init_model_rest_blueprint`函数生成的delete路由, 结尾添加`/`, 用于支持以`/`结尾的URL删除请求(`[DELETE]url_prefix/did/`)
-    - [A] 添加`FLASKZ_DATABASE_ENGINE_KWARGS`参数, 用于自定义engine参数
+    - [A] 添加`FLASKZ_DATABASE_ENGINE_KWARGS`参数, 用于自定义`engine`参数
 - **1.2** `2023/02/01`
     - [A] 添加`FLASKZ_DATABASE_POOL_PRE_PING`参数, 用于设置engine的`pool_pre_ping`参数
     - [A] `init_model`函数添加数据库连接异常处理和重新连接

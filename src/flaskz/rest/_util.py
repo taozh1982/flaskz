@@ -117,11 +117,12 @@ def log_operation(*args, **kwargs):
         logging_callback(*args, **kwargs)
 
 
-def gen_route_method(method, url_prefix):
+def gen_route_method(method, url_prefix, view_func_name=None):
     """
     Generate endpoint unique function name.
     :param method:
     :param url_prefix:
+    :param view_func_name:
     :return:
     """
 
@@ -129,10 +130,13 @@ def gen_route_method(method, url_prefix):
         def wrap(*args, **kwargs):
             return f(*args, **kwargs)
 
-        methods = url_prefix.split('/')
-        methods.append(method)
-        methods.insert(0, 'model_route')
-        wrap.__name__ = '_'.join(filter_list(methods, lambda item: item != '')).replace('-', '_')
+        if view_func_name is None:
+            methods = url_prefix.split('/')
+            methods.append(method)
+            methods.insert(0, 'model_route')
+            wrap.__name__ = '_'.join(filter_list(methods, lambda item: item != '')).replace('-', '_')
+        else:
+            wrap.__name__ = view_func_name
         return wrap
 
     return decorator

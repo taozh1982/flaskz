@@ -6,6 +6,7 @@ from flask import Flask
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine import ExceptionContext
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -48,7 +49,8 @@ def init_model(app):
                 engine_kwargs[engine_key] = app_config.get(config_key)
 
         engine = create_engine(database_uri, **engine_kwargs)
-        DBSession.configure(binds={ModelBase: engine})  # for multiple db
+        session_kwargs = app_config.get('FLASKZ_DATABASE_SESSION_KWARGS') or {}  # @2023-08-25: add FLASKZ_DATABASE_SESSION_KWARGS config
+        DBSession.configure(binds={ModelBase: engine}, **session_kwargs)  # for multiple db
 
         with engine.connect():  # connect test
             flaskz_logger.info('Database ' + database_uri + ' is ready\n')
@@ -58,7 +60,10 @@ def init_model(app):
 
         @event.listens_for(engine, "handle_error")
         def handle_engine_error(context: ExceptionContext):  # @2023-02-01: add error handler
-            flaskz_logger.error('Engine error:\n' + str(context.original_exception))
+            original_exception = getattr(context, 'original_exception', None)
+            flaskz_logger.error('Engine error:\n' + str(original_exception))
+            if not isinstance(original_exception, OperationalError):  # @2023-08-25: add
+                return
             if engine_kwargs.get('pool_pre_ping') is not True:
                 if not context.connection or context.sqlalchemy_exception.connection_invalidated:
                     now = datetime.now().timestamp()

@@ -92,35 +92,37 @@ class SSH(object):
                 self._channel.settimeout(self._timeout)
         return self._channel
 
-    def run_command(self, command, recv=True):
+    def run_command(self, command, recv=True, clean=True):
         """
         Run the command.
         If recv is False, just run the command and return immediately, without waiting for the result
 
-        .. versionupdated:: 1.6.1   - @2023-06-26 add recv parameter
+        .. versionupdated::
+            1.6.1   - @2023-06-26 add recv parameter
+            1.6.3   - @2023-07-10 add clean parameter
 
         Example:
             ssh.run_command('ls -l')
             ssh.run_command('show run')
+            ssh.run_command({
+                'command': ' ',
+                'clean': False,
+            })
 
          :param command: the command to run.
          :param recv: wait for the result or not.
+         :param clean: clean output info or not, default True(clean)
 
          :return: the output of the command
         """
-        if type(command) is dict:
-            _command = command.get('command')
-            _recv = command.get('recv') is not False
-        else:
-            _command = command
-            _recv = recv
+        _command, _recv, _clean = _get_command_arg(command, recv=recv, clean=clean)
 
         _command = _command.strip()
         self.channel.send(_command + '\n')
         if _recv is False:
             return None
 
-        output = self._get_output(_command)
+        output = self._get_output(_command, clean=_clean)
         enable_commands = ('sudo', 'enable')
         secondary_password = self._secondary_password  # or self._password
         if secondary_password and \
@@ -221,9 +223,10 @@ class SSH(object):
         else:
             return True
 
-    def _get_output(self, command):
+    def _get_output(self, command, clean=True):
         output = self._recv_data()
-        output = _clear_redundant(output, command)
+        if clean is not False:
+            output = _clean_output_info(output, command)
         return output
 
     def _recv_data(self):
@@ -244,6 +247,18 @@ class SSH(object):
                     break
 
         return ''.join(res_list)
+
+
+def _get_command_arg(command, recv, clean):
+    if type(command) is dict:
+        _command = command.get('command')
+        _recv = command.get('recv') is not False if 'recv' in command else recv
+        _clean = command.get('clean') is not False if 'clean' in command else clean
+    else:
+        _command = command
+        _recv = recv
+        _clean = clean
+    return _command, _recv, _clean
 
 
 def _create_socket(hostname, port, timeout=0):
@@ -278,7 +293,7 @@ def _create_socket(hostname, port, timeout=0):
     return sock
 
 
-def _clear_redundant(txt, command):
+def _clean_output_info(txt, command):
     """
     Clear the redundant information.
     - Welcome info      ex)Welcome to Ubuntu...

@@ -22,6 +22,9 @@ def parse_pss(cls, pss_config=None):
                         ">": 1,                     # operator:value, operators)'='/'>'/'<'/'>='/'<='/'BETWEEN'/'LIKE'/'IN'
                         "<": 20
                     },
+                   "city": {                        # AND (city IN ('Paris','London'))
+                        "in": ['Paris' ,'London'],
+                    },
                     "email": "taozh@focus-ui.com",  # AND (email='taozh@focus-ui.com')
                     "_ors": {                       # AND (country='America' OR country='Canada')
                         "country": "America||Canada"
@@ -139,7 +142,7 @@ def _get_sorts(cls, sort):
     sorts = []
     if is_list(sort):
         sorts = sort
-    elif is_dict(sort):
+    else:  # @2023-08-31 elif is_dict(sort):-->else
         sorts = [sort]
 
     for sort_item in sorts:
@@ -190,13 +193,13 @@ def _get_search_like_filters(cls, search_like, search_ilike):
         if not (search_like.startswith('%') or search_like.startswith('%')):
             search_like = "%" + search_like + "%"
         for col in like_columns:
-            like_filters.append(_get_col_op(col, 'like', search_like))
+            like_filters.append(get_col_op(col, 'like', search_like))
 
     if search_ilike is not None and search_ilike != '':
         if not (search_ilike.startswith('%') or search_ilike.startswith('%')):
             search_ilike = "%" + search_ilike + "%"
         for col in like_columns:
-            like_filters.append(_get_col_op(col, 'ilike', search_ilike))
+            like_filters.append(get_col_op(col, 'ilike', search_ilike))
     return like_filters
 
 
@@ -214,16 +217,16 @@ def _append_search_filters(items, cls, key, value):
             if value != '':
                 val_arr = value.split('||')
                 for op_v in val_arr:
-                    items.append(_get_col_op(col, '==', op_v))
+                    items.append(get_col_op(col, '==', op_v))
         elif is_dict(value):
             for operator, op_v in value.items():
-                items.append(_get_col_op(col, operator, op_v))
+                items.append(get_col_op(col, operator, op_v))
         else:
-            items.append(_get_col_op(col, '==', value))
+            items.append(get_col_op(col, '==', value))
     return items
 
 
-def _get_col_op(column, operator, value):
+def get_col_op(column, operator, value):
     """
         < , <= , == , != , > , >=
         in , notin , between ,

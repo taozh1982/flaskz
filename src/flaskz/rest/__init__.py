@@ -112,7 +112,7 @@ def register_model_route(app, model, rule, module=None, types=None, multi_models
     return app
 
 
-def register_model_add_route(app, model, rule, module=None, action='add', methods=None, to_json_option=None, strict_slash=True):
+def register_model_add_route(app, model, rule, module=None, action='add', methods=None, to_json_option=None, strict_slash=True, endpoint=None):
     """
     Register a add type URL rule for the specified model class to the application/blueprint.
 
@@ -127,12 +127,13 @@ def register_model_add_route(app, model, rule, module=None, action='add', method
     :param methods: The methods of the route, default is ['POST']
     :param to_json_option: The option to return the json, ex){'cascade': 1}
     :param strict_slash: If not false, the rule url will end with slash
+    :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     :return:
     """
     methods = methods or ['POST']
     rule, did_rule = _get_route_rule(rule, strict_slash)
 
-    @app.route(rule, methods=methods)
+    @app.route(rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('add', rule)
     def add():
@@ -149,7 +150,7 @@ def register_model_add_route(app, model, rule, module=None, action='add', method
         return create_response(success, res_data)
 
 
-def register_model_delete_route(app, model, rule, module=None, action='delete', methods=None, to_json_option=None, strict_slash=True):
+def register_model_delete_route(app, model, rule, module=None, action='delete', methods=None, to_json_option=None, strict_slash=True, endpoint=None):
     """
     Register a delete type URL rule for the specified model class to the application/blueprint.
 
@@ -164,12 +165,13 @@ def register_model_delete_route(app, model, rule, module=None, action='delete', 
     :param methods: The methods of the route, default is ['DELETE']
     :param to_json_option: The option to return the json, ex){'cascade': 1}
     :param strict_slash: If not false, the rule url will end with slash
+    :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     :return:
     """
     methods = methods or ['DELETE']
     rule, did_rule = _get_route_rule(rule, strict_slash)
 
-    @app.route(did_rule, methods=methods)
+    @app.route(did_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('delete', rule)
     def delete(did):
@@ -183,7 +185,7 @@ def register_model_delete_route(app, model, rule, module=None, action='delete', 
         return create_response(success, res_data)
 
 
-def register_model_update_route(app, model, rule, module=None, action='update', methods=None, to_json_option=None, strict_slash=True):
+def register_model_update_route(app, model, rule, module=None, action='update', methods=None, to_json_option=None, strict_slash=True, endpoint=None):
     """
     Register update type URL rule for the specified model class to the application/blueprint.
     The priority of the primary key in the url is higher than that in the body.
@@ -199,13 +201,14 @@ def register_model_update_route(app, model, rule, module=None, action='update', 
     :param methods: The methods of the route, default is ['PATCH']
     :param to_json_option: The option to return the json, ex){'cascade': 1}
     :param strict_slash: If not false, the rule url will end with slash
+    :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     :return:
     """
     methods = methods or ['PATCH']
     rule, did_rule = _get_route_rule(rule, strict_slash)
 
-    @app.route(rule, methods=methods)
-    @app.route(did_rule, methods=methods)
+    @app.route(rule, methods=methods, endpoint=endpoint)
+    @app.route(did_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('update', rule)
     def update(did=None):
@@ -224,7 +227,7 @@ def register_model_update_route(app, model, rule, module=None, action='update', 
         return create_response(success, res_data)
 
 
-def register_model_upsert_route(app, model, rule, module=None, action='upsert', methods=None, to_json_option=None, strict_slash=True, rule_suffix='upsert'):
+def register_model_upsert_route(app, model, rule, module=None, action='upsert', methods=None, to_json_option=None, strict_slash=True, rule_suffix='upsert', endpoint=None):
     """
     Register a upsert type URL rule for the specified model class to the application/blueprint.
     If primary key value is in json, perform an update action, otherwise perform an add action.
@@ -241,11 +244,12 @@ def register_model_upsert_route(app, model, rule, module=None, action='upsert', 
     :param to_json_option: The option to return the json, ex){'cascade': 1}
     :param strict_slash: If not false, the rule url will end with slash
     :param rule_suffix: The upsert suffix, default is 'upsert'
+    :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     """
     methods = methods or ['POST']
     rule, upsert_rule = _get_route_rule(rule, strict_slash, rule_suffix)
 
-    @app.route(upsert_rule, methods=methods)
+    @app.route(upsert_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('upsert', rule)
     def upsert():
@@ -267,7 +271,7 @@ def register_model_upsert_route(app, model, rule, module=None, action='upsert', 
         return create_response(success, res_data)
 
 
-def register_model_query_route(app, model, rule, module=None, action=None, methods=None, to_json_option=None, strict_slash=True):
+def register_model_query_route(app, model, rule, module=None, action=None, methods=None, to_json_option=None, strict_slash=True, endpoint=None):
     """
     Register query type URL rule for the specified model class to the application/blueprint.
 
@@ -282,13 +286,14 @@ def register_model_query_route(app, model, rule, module=None, action=None, metho
     :param methods: The methods of the route, default is ['GET']
     :param to_json_option: The option to return the json, ex){'cascade': 1}
     :param strict_slash: If not false, the rule url will end with slash
+    :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     :return:
     """
     methods = methods or ['GET']
     rule, did_rule = _get_route_rule(rule, strict_slash)
 
-    @app.route(rule, methods=methods)
-    @app.route(did_rule, methods=methods)
+    @app.route(rule, methods=methods, endpoint=endpoint)
+    @app.route(did_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('query', rule)
     def query(did=None):
@@ -310,7 +315,7 @@ def register_model_query_route(app, model, rule, module=None, action=None, metho
         return create_response(success, res_data)
 
 
-def register_model_query_pss_route(app, model, rule, module=None, action=None, methods=None, to_json_option=None, strict_slash=True, rule_suffix='pss'):
+def register_model_query_pss_route(app, model, rule, module=None, action=None, methods=None, to_json_option=None, strict_slash=True, rule_suffix='pss', endpoint=None):
     """
     Register pss query URL rule for the specified model class to the application/blueprint.
     pss = paging + search + sort
@@ -327,12 +332,13 @@ def register_model_query_pss_route(app, model, rule, module=None, action=None, m
     :param to_json_option: The option to return the json, ex){'cascade': 1}
     :param strict_slash: If not false, the rule url will end with slash
     :param rule_suffix: The pss suffix, default is 'query_pss'
+    :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     :return:
     """
     methods = methods or ['GET', 'POST']
     rule, pss_rule = _get_route_rule(rule, strict_slash, rule_suffix)
 
-    @app.route(pss_rule, methods=methods)
+    @app.route(pss_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('query_pss', rule)
     def query_pss():
@@ -347,7 +353,7 @@ def register_model_query_pss_route(app, model, rule, module=None, action=None, m
         return create_response(success, data)
 
 
-def register_models_query_route(app, models, rule, module=None, action=None, methods=None, strict_slash=True, rule_suffix='multi'):
+def register_models_query_route(app, models, rule, module=None, action=None, methods=None, strict_slash=True, rule_suffix='multi', endpoint=None):
     """
     Register query multi models URL rule to the application/blueprint.
     pss = paging + search + sort
@@ -373,19 +379,14 @@ def register_models_query_route(app, models, rule, module=None, action=None, met
     :param methods: The methods of the route, default is ['GET', 'POST']
     :param strict_slash: If not false, the rule url will end with slash
     :param rule_suffix: The pss suffix, default is 'multi'
+    :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
 
-    :param rule:
-    :param module:
-    :param action:
-    :param methods:
-    :param strict_slash:
-    :param rule_suffix:
     :return:
     """
     methods = methods or ['GET']
     rule, multi_rule = _get_route_rule(rule, strict_slash, rule_suffix)
 
-    @app.route(multi_rule, methods=methods)
+    @app.route(multi_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('query_multi', rule)
     def query_multi():

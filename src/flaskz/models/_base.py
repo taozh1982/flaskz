@@ -1,8 +1,6 @@
-from sqlalchemy import text, Integer, Numeric
+from sqlalchemy import Integer, Numeric
 
 from .. import res_status_codes
-from ..utils._cls import ins_to_dict
-from ..utils._common import find_list, filter_list, is_str, is_dict, is_list, get_dict_value_by_type
 
 __all__ = ['BaseModelMixin']
 
@@ -313,9 +311,13 @@ class BaseModelMixin:
         :param data:
         :return:
         """
+
         instance = create_instance(cls, data)
-        with db_session() as session:
+        with _db_session(False, True) as session:
             session.add(instance)
+            session.commit()
+            session.refresh(instance)
+
         return instance
 
     @classmethod
@@ -379,11 +381,13 @@ class BaseModelMixin:
         if pk_value is None:  # pk value does not exist
             return res_status_codes.db_data_not_found
 
-        with db_session() as session:
+        with _db_session(False, True) as session:
             instance = session.query(cls).get(pk_value)  # Scenarios for extending BaseModelMixin instead of ModelMixin
             if instance is None:  # Object does not exist
                 return res_status_codes.db_data_not_found
             cls._update_ins(instance, data)  # @2022-12-01 change to ensure the updated instance and the setattr action in the same session
+            session.commit()
+            session.refresh(instance)
         return instance
 
     @classmethod
@@ -561,13 +565,14 @@ class BaseModelMixin:
             field = cls.get_column_field(col)  # col.key
             value = data.get(field)
             if value is not None:  # maybe 0
-                ors.append(field + "='" + str(value).strip() + "'")
+                ors.append(get_col_op(col, '==', value))  # @2023-08-16, text-->op
 
         if len(ors) == 0:
             return None
 
         with db_session(do_commit=False) as session:
-            query = session.query(cls).filter(text(' OR '.join(ors)))
+            query = session.query(cls)
+            query = append_query_filter(query, ors, 'or')
             instance = query.first()
         return instance
 
@@ -836,4 +841,7 @@ class BaseModelMixin:
 
 
 # must
-from ._util import create_instance, create_relationships, db_session, append_query_filter
+from ..utils._cls import ins_to_dict
+from ..utils._common import find_list, filter_list, is_str, is_dict, is_list, get_dict_value_by_type
+from ._util import create_instance, create_relationships, db_session, append_query_filter, _db_session
+from ._query_util import get_col_op

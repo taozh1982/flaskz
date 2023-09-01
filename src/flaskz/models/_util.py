@@ -5,11 +5,11 @@ from sqlalchemy import text, or_, and_
 
 from . import DBSession
 from ._base import BaseModelMixin
-from ..utils import get_g_cache, set_g_cache
+from ..utils import get_g_cache, set_g_cache, remove_g_cache
 
 __all__ = ['create_instance', 'create_relationships',
            'query_all_models', 'query_multiple_model',
-           'append_debug_queries', 'get_debug_queries',
+           'append_debug_queries', 'get_debug_queries', 'append_query_filter',
            'get_db_session', 'db_session', 'close_db_session',
            'model_to_dict',
            'is_model_mixin_instance'
@@ -123,6 +123,43 @@ def get_debug_queries():
     return []
 
 
+def append_query_filter(query, filters, joined):  # @2023-06-21 add
+    """
+    Append filters to the query
+    :param query:
+    :param filters:
+    :param joined:
+    :return:
+    """
+    if len(filters) == 0:
+        return query
+    joined = joined.lower()
+    if joined == 'or':
+        joined_text = ' OR '
+        joined_func = or_
+    elif joined == 'and':
+        joined_text = ' AND '
+        joined_func = and_
+    else:
+        return query
+
+    text_items = []
+    binary_expression_items = []
+    for item in filters:
+        if type(item) is str:
+            text_items.append(item)
+        else:
+            binary_expression_items.append(item)
+
+    if len(text_items) > 0:
+        query = query.filter(text('(' + (joined_text.join(text_items)) + ')'))
+
+    if len(binary_expression_items) > 0:
+        query = query.filter(joined_func(*binary_expression_items))
+
+    return query
+
+
 def get_db_session():
     """
     Get the db session from g(flask)/ Create a db session(without request).
@@ -139,23 +176,34 @@ def get_db_session():
         session = get_g_cache('_flaskz_db_session')
         if session is None:
             session = DBSession()
-            setattr(session, '_flaskz_db_session', True)
             set_g_cache('_flaskz_db_session', session)
     else:
         session = DBSession()
+        setattr(session, '_temporary', True)  # @2022-08-22 add '_temporary' attr
     return session
 
 
 def close_db_session():
     """
-    Close the session in the g.
+    Close the cached session.
 
     :return:
     """
     if _has_g_context():  # @2022-07-26 add
         session = get_g_cache('_flaskz_db_session')
         if session is not None:
+            remove_g_cache('_flaskz_db_session')
             session.close()
+
+
+def _close_temporary_session(session):
+    """
+    @2023-05-06: add, close temporary(non-cached) session
+    :param session:
+    :return:
+    """
+    if getattr(session, '_temporary', None) is True:
+        session.close()
 
 
 @contextmanager
@@ -180,8 +228,24 @@ def db_session(do_commit=True):
         if do_commit is not False:
             session.rollback()
         raise e
-    if getattr(session, '_flaskz_db_session', None) is not True:  # @2023-05-06: add, close non-cached session
-        session.close()
+    _close_temporary_session(session)
+
+
+@contextmanager
+def _db_session(do_commit, do_rollback):
+    """
+    # @2023-08-21: add, for internal use
+    """
+    session = get_db_session()
+    try:
+        yield session
+        if do_commit is True:
+            session.commit()
+    except Exception as e:
+        if do_rollback is True:
+            session.rollback()
+        raise e
+    _close_temporary_session(session)
 
 
 def model_to_dict(ins, option=None):
@@ -227,40 +291,3 @@ def _has_g_context():
         return False
     return True
     # return has_request_context() or g is not None
-
-
-def append_query_filter(query, filters, joined):  # @2023-06-21 add
-    """
-    Append filters to the query
-    :param query:
-    :param filters:
-    :param joined:
-    :return:
-    """
-    if len(filters) == 0:
-        return query
-    joined = joined.lower()
-    if joined == 'or':
-        joined_text = ' OR '
-        joined_func = or_
-    elif joined == 'and':
-        joined_text = ' AND '
-        joined_func = and_
-    else:
-        return query
-
-    text_items = []
-    binary_expression_items = []
-    for item in filters:
-        if type(item) is str:
-            text_items.append(item)
-        else:
-            binary_expression_items.append(item)
-
-    if len(text_items) > 0:
-        query = query.filter(text('(' + (joined_text.join(text_items)) + ')'))
-
-    if len(binary_expression_items) > 0:
-        query = query.filter(joined_func(*binary_expression_items))
-
-    return query
