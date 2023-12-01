@@ -75,11 +75,13 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
     return api_blueprint
 
 
-def register_model_route(app, model, rule, module=None, types=None, multi_models=None, to_json_option=None, strict_slash=True):
+def register_model_route(app, model, rule, module=None, types=None, multi_models=None, to_json_option=None, get_pss_config=None, strict_slash=True):
     """
     Register url rules for the specified model class to the application/blueprint.
 
     .. versionadded:: 1.5
+    .. versionupdated::
+        1.6.4 - add get_pss_config parameter
 
     Example:
         register_model_route(api_bp, User, 'users', 'users')
@@ -91,9 +93,14 @@ def register_model_route(app, model, rule, module=None, types=None, multi_models
     :param types: The types of the route, default is ['query', 'pss', 'multi', 'add', 'update', 'upsert', 'delete']
     :param multi_models: The multiple DB model classes
     :param to_json_option: The option to return the json, ex){'cascade': 1}
+    :param get_pss_config: The callback function to custom pss query config
     :param strict_slash: If not false, the rule url will end with slash
     :return:
     """
+    if type(get_pss_config) is bool:  # version match
+        strict_slash = get_pss_config
+        get_pss_config = None
+
     types = get_list(types, ['query', 'pss', 'multi', 'add', 'update', 'upsert', 'delete'])
     if 'add' in types:
         register_model_add_route(app, model, rule, module, to_json_option=to_json_option, strict_slash=strict_slash)
@@ -106,7 +113,7 @@ def register_model_route(app, model, rule, module=None, types=None, multi_models
     if 'query' in types:
         register_model_query_route(app, model, rule, module, to_json_option=to_json_option, strict_slash=strict_slash)
     if 'pss' in types:
-        register_model_query_pss_route(app, model, rule, module, to_json_option=to_json_option, strict_slash=strict_slash)
+        register_model_query_pss_route(app, model, rule, module, to_json_option=to_json_option, strict_slash=strict_slash, get_pss_config=get_pss_config)
     if multi_models and ('multi' in types or 'multiple' in types):
         register_models_query_route(app, multi_models, rule, module)
     return app
@@ -315,13 +322,17 @@ def register_model_query_route(app, model, rule, module=None, action=None, metho
         return create_response(success, res_data)
 
 
-def register_model_query_pss_route(app, model, rule, module=None, action=None, methods=None, to_json_option=None, strict_slash=True, rule_suffix='pss', endpoint=None):
+def register_model_query_pss_route(app, model, rule, module=None, action=None, methods=None, to_json_option=None, strict_slash=True, rule_suffix='pss', get_pss_config=None,
+                                   endpoint=None):
     """
     Register pss query URL rule for the specified model class to the application/blueprint.
     pss = paging + search + sort
 
+    .. versionadded::
+        1.6.4 - add get_pss_config param
+
     Examples:
-        register_model_query_pss_route(api_blueprint, User, 'users', 'users')
+        register_model_query_pss_route(api_blueprint, User, 'users', 'users', get_pss_config=append_search_config)
 
     :param app: Flask application / Blueprints instance
     :param model: The DB model class, ex)User
@@ -332,6 +343,7 @@ def register_model_query_pss_route(app, model, rule, module=None, action=None, m
     :param to_json_option: The option to return the json, ex){'cascade': 1}
     :param strict_slash: If not false, the rule url will end with slash
     :param rule_suffix: The pss suffix, default is 'query_pss'
+    :param get_pss_config: Callback function used to generate pss config.
     :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     :return:
     """
@@ -344,6 +356,9 @@ def register_model_query_pss_route(app, model, rule, module=None, action=None, m
     def query_pss():
         request_json = get_request_json({})  # @2023-06-15, request.json --> get_request_json({})
         req_log_data = json.dumps(request_json)
+
+        if callable(get_pss_config):  # @2023-10-13 add
+            request_json = get_pss_config(request_json)  # @2023-10-23 fix, get_pss_config-->request_json
 
         success, data = model.query_pss(parse_pss(model, request_json))
         if success is True:
@@ -367,6 +382,7 @@ def register_models_query_route(app, models, rule, module=None, action=None, met
                                          'option': {
                                              # 'cascade': 1,
                                              'include': ['id', 'name']
+                                             # 'filter': lambda ins: ins.type == 'local'
                                          }
                                      }
                                  })

@@ -8,13 +8,15 @@ import socket
 import stat
 import time
 from contextlib import contextmanager
+from datetime import datetime
+from typing import Optional, Tuple, Union
 
 import paramiko
 from paramiko.ssh_exception import SSHException
 
 
 @contextmanager
-def ssh_session(hostname, username, password=None, port=22, **kwargs):
+def ssh_session(hostname: str, username: str, password: str = None, port: Optional[int] = 22, **kwargs):
     """
     SSH contextmanager.
 
@@ -27,11 +29,91 @@ def ssh_session(hostname, username, password=None, port=22, **kwargs):
 
         with ssh_session(host, username, password, timeout=20, secondary_password=enable_pwd, recv_endswith=['# ', '$ ', ': ', '? ', '#']) as ssh:
             ssh.run_command_list(['enable', 'show run'])
-
     """
     ssh_client = SSH(hostname=hostname, username=username, password=password, port=port, **kwargs)
     yield ssh_client
     ssh_client.close()
+
+
+def ssh_run_command(connect_kwargs: dict, command: Union[str, list], run_kwargs: Optional[dict] = None) -> Tuple[bool, str]:
+    """
+    Run the specified command.
+    If command is a list, by default, returns the list of results , if run_kwargs.last_result==True returns the result of the last command
+
+    .. versionadded:: 1.6.4
+
+    Example:
+        ssh_run_command({'hostname': hostname, 'username': username, 'password': password},'show running-config')
+
+        ssh_run_command(
+            # connect_kwargs
+            {'hostname': 'host', 'username': 'username', 'password': 'password',  # host
+             'timeout': 10,  # connect timeout
+             'secondary_password': 'enable_pwd',  # enable password
+             'channel_kwargs': {'width': 1000, 'timeout': 2}},  # channel kwargs
+            # command
+            'show running-config',
+            # run_kwargs
+            {
+                'clean': False,  # not clean output info
+                'prompt': False,  # disable prompt
+            })
+
+    :param connect_kwargs: the connect kwargs, ex) {'hostname': hostname, 'username': username, 'password': password, 'timeout': 10}
+    :param command: the specified command, ex) ls -l
+    :param run_kwargs: the run command kwargs, ex) {'recv': False, 'prompt': False}
+    :return: (success, result_or_err)
+    """
+    connect_kwargs = connect_kwargs if connect_kwargs else {}
+    run_kwargs = run_kwargs if run_kwargs else {}
+    try:
+        with ssh_session(**connect_kwargs) as ssh:
+            if type(command) is list:
+                return True, ssh.run_command_list(command, **run_kwargs)
+            else:
+                return True, ssh.run_command(command, **run_kwargs)
+    except Exception as e:
+        return False, str(e)
+
+
+def ssh_run_command_list(connect_kwargs: dict, command_list: list, run_kwargs: Optional[dict] = None) -> Tuple[bool, Union[list, str]]:
+    """
+    Run a command list.
+    By default, returns the list of results , if run_kwargs.last_result==True returns the result of the last command
+
+    .. versionadded:: 1.6.4
+
+    Example:
+        ssh.run_command_list({'hostname': hostname, 'username': username, 'password': password}, ['show version', 'show running-config'])
+
+        ssh_run_command_list(
+            # connect_kwargs
+            {'hostname': 'host', 'username': 'username', 'password': 'password',  # host
+             'timeout': 10,  # connect timeout
+             'secondary_password': 'enable_pwd',  # enable password
+             'channel_kwargs': {'width': 1000, 'timeout': 2}},  # channel kwargs
+            # command
+            ['enable', 'show version'],
+            # run_kwargs
+            {
+                'last_result': True,  # not clean output info
+                'prompt': False,  # disable prompt
+            })
+
+    :param connect_kwargs: the connect kwargs, ex) {'hostname': hostname, 'username': username, 'password': password, 'timeout': 10}
+    :param command_list: the command list, ex) ['show version', 'show running-config']
+    :param run_kwargs: the run command kwargs, ex) {'recv': False, 'prompt': False}
+
+    :return: (success, result_or_err)
+    """
+    try:
+        connect_kwargs = connect_kwargs if connect_kwargs else {}
+        run_kwargs = run_kwargs if run_kwargs else {}
+
+        with ssh_session(**connect_kwargs) as ssh:
+            return True, ssh.run_command_list(command_list, **run_kwargs)
+    except Exception as e:
+        return False, str(e)
 
 
 class SSH(object):
@@ -39,18 +121,26 @@ class SSH(object):
         """
         Create a SSH instance.
 
-        .. versionupdated:: 1.6 - add secondary_password and recv_endswith kwargs
+        .. versionupdated::
+            1.6   - add secondary_password and recv_endswith kwargs
+            1.6.4 - add connect_kwargs and channel_kwargs kwargs
+                  - add prompt param
+                  - add prompt param and logic
+                  - optimize _recv_data function
 
         Example:
-            ssh = SSH(host, username, password, timeout=20)
+            ssh = SSH(host, username, password)
+            ssh.run_command('show version')
             ssh.run_command('ls -l')
 
             ssh = SSH(host, username, password, timeout=20)
+            ssh.run_command_list(['show version', 'show running-config'])
             ssh.run_command_list(['enable', enable_pwd, 'show run'])
 
             ssh = SSH(host, username, password, timeout=20, secondary_password=enable_pwd, recv_endswith=['# ', '$ ', ': ', '? ', '#'])
             ssh.run_command_list(['enable', 'show run'])
-
+            ssh.run_command_list(['enable', 'show run'], last_result=True) # return last command output
+            ssh.run_command_list(['show version', 'show clock', 'show running-config'])
 
         :param hostname: the host(address) to ssh
         :param username: the username of the host
@@ -67,39 +157,46 @@ class SSH(object):
         self._secondary_password = kwargs.pop('secondary_password', None)  # for enable/sudo
         # recv_endswith = kwargs.pop('recv_endswith', None)  # for stop receiving
         self.recv_endswith = tuple(kwargs.pop('recv_endswith', None) or ['# ', '$ ', ': ', '? '])  # for stop receiving
-        self._timeout = kwargs.pop('timeout', 0)
+        if 'timeout' in kwargs:
+            self._timeout = kwargs.pop('timeout', 0)
+        else:
+            self._timeout = 10
 
+        if hostname is None and 'host' in kwargs:
+            hostname = kwargs.pop('host', None)
         # self.transport = paramiko.Transport((hostname, port))
         self.transport = paramiko.Transport(_create_socket(hostname=hostname, port=port, timeout=self._timeout))
         _connect_kwargs = kwargs.pop('connect_kwargs', None) or {}  # kwargs for Transport.connect()
         self.transport.connect(username=username, password=password, **_connect_kwargs)
+
+        self._channel_kwargs = {'width': 100000, 'height': 100000}
+        self._channel_kwargs.update(kwargs.pop('channel_kwargs', {}))
+        if 'timeout' in self._channel_kwargs:
+            self._channel_timeout = self._channel_kwargs.pop('timeout', 0)
+        else:
+            self._channel_timeout = self._timeout
 
         self.ssh = paramiko.SSHClient()
         self.ssh._transport = self.transport
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     @property
-    def sftp(self):
-        if not hasattr(self, '_sftp'):
-            self._sftp = paramiko.SFTPClient.from_transport(self.transport)
-        return self._sftp
-
-    @property
     def channel(self):
         if not hasattr(self, '_channel'):
-            self._channel = self.ssh.invoke_shell(height=100000)
-            if self._timeout > 0:
-                self._channel.settimeout(self._timeout)
+            self._channel = self.ssh.invoke_shell(**self._channel_kwargs)  # @2023-10-31 add width
+            if self._channel_timeout > 0:
+                self._channel.settimeout(self._channel_timeout)
         return self._channel
 
-    def run_command(self, command, recv=True, clean=True):
+    def run_command(self, command: str, recv: bool = True, clean: bool = True, prompt=None) -> Union[str, None]:
         """
-        Run the command.
+        Run the specified command.
         If recv is False, just run the command and return immediately, without waiting for the result
 
         .. versionupdated::
             1.6.1   - @2023-06-26 add recv parameter
             1.6.3   - @2023-07-10 add clean parameter
+            1.6.4   - @2023-10-30 add prompt parameter & logic
 
         Example:
             ssh.run_command('ls -l')
@@ -112,36 +209,50 @@ class SSH(object):
          :param command: the command to run.
          :param recv: wait for the result or not.
          :param clean: clean output info or not, default True(clean)
+         :param prompt: the prompt of the command line
 
          :return: the output of the command
         """
-        _command, _recv, _clean = _get_command_arg(command, recv=recv, clean=clean)
+        command, recv, clean = _get_command_arg(command, recv, clean)
 
-        _command = _command.strip()
-        self.channel.send(_command + '\n')
-        if _recv is False:
+        if prompt is None:  # prompt is False for config
+            prompt = self.get_prompt()  # 1.get prompt 2.remove welcome
+
+        output = self._run_command(command, recv, prompt)
+        if output is None:
             return None
 
-        output = self._get_output(_command, clean=_clean)
-        enable_commands = ('sudo', 'enable')
-        secondary_password = self._secondary_password  # or self._password
-        if secondary_password and \
-                _command.lower().startswith(enable_commands) and \
-                'assword' in output:  # input password
-            pwd_output = self.run_command(secondary_password)
-            # if 'assword' in pwd_output:
-            if pwd_output == output:
+        if self._is_secondary_login(command, output):
+            secondary_login_output = self._secondary_login(output)
+            if secondary_login_output is False:
                 return output
-            return self.run_command(_command)
+            else:
+                if _is_enable_command(command, True):  # sudo ls --> secondary_login --> return result, no need to resend
+                    output = secondary_login_output
+                else:
+                    if prompt is not False:
+                        prompt = self.get_prompt()
+                    output = self._run_command(command, recv)
+
+        if output is None:
+            return output
+
+        if clean is not False:
+            output = _clean_output(output, command, prompt)
 
         return output
 
-    def run_command_list(self, command_list, last_result=False):
+        # --------------------------------------------------------------
+
+    def run_command_list(self, command_list: list, last_result: bool = False, **kwargs) -> Union[list, str]:
         """
         Run a command list.
         By default, returns the list of results , if last_result==True returns the result of the last command
 
         Example:
+            ssh.run_command_list(['show version', 'show running-config'])
+            ssh.run_command_list(['enable', 'show version'], True)
+            ssh.run_command_list(['enable',secondary_password, 'show version'], True)
             ssh.run_command_list(['cd /usr/projects/git/srte',
                       'pwd',
                       'git pull origin master',
@@ -155,11 +266,46 @@ class SSH(object):
          :return: command output result(list/last)
         """
         re_list = []
-        for command in command_list:
-            re_list.append(self.run_command(command))
-        if last_result is True:
-            return re_list[-1]
+        prompt = kwargs.get('kwargs', None)
+        if prompt is None:
+            kwargs['prompt'] = self.get_prompt()  # for reuse
+        count = len(command_list)
+        for index, command in enumerate(command_list):
+            if last_result is True:
+                if index == count - 1:  # last
+                    return self.run_command(command, **kwargs)
+                else:
+                    self.run_command(command, **kwargs)  # recv can not be false, ex)enable --> recv --> secondary_password
+            else:
+                re_list.append(self.run_command(command, **kwargs))
         return re_list
+
+    def get_prompt(self) -> str:
+        """
+        Return the prompt of the command line
+
+        .. versionadded:: 1.6.4
+
+        Example:
+            ssh.get_prompt()
+
+        :return:
+        """
+        output = self._run_command('', recv=True)
+        newline_pos = max(output.rfind('\n'), output.rfind('\r'))
+
+        return output[newline_pos + 1:].lstrip('\r\n') if newline_pos != -1 else output
+
+    def close(self):
+        """Close the connect"""
+        self.channel.close()
+        self.ssh.close()
+
+    @property
+    def sftp(self):
+        if not hasattr(self, '_sftp'):
+            self._sftp = paramiko.SFTPClient.from_transport(self.transport)
+        return self._sftp
 
     def sftp_get_dir(self, remote_dir, local_dir):
         """
@@ -169,7 +315,7 @@ class SSH(object):
         Example:
             ssh.sftp_get_dir('/usr/projects/git/srte/src/', '/Users/taozh/Work/Codes/ssh_test/sftp')
         """
-        if not self._path_exists(remote_dir):
+        if not self._is_path_exists(remote_dir):
             return False
         remote_dir = _remove_end_slash(remote_dir)
         local_dir = _remove_end_slash(local_dir)
@@ -207,12 +353,39 @@ class SSH(object):
                 all_files.append(filename)
         return all_files
 
-    def close(self):
-        """Close the connect"""
-        self.channel.close()
-        self.ssh.close()
+    def _run_command(self, command, recv=True, prompt=None):
+        _command = command.strip()
+        self.channel.send(_command + '\n')
+        if recv is False:
+            return None
+        output = self._recv_data(prompt)
+        return output
 
-    def _path_exists(self, path):
+    def _is_secondary_login(self, command, output):
+        """
+        Determine whether a secondary login is required by checking output text
+        """
+        if 'assword' not in output:  # input password
+            return False
+        secondary_password = self._secondary_password  # or self._password
+        if secondary_password is None:
+            return False
+        return _is_enable_command(command)
+
+    def _secondary_login(self, output):
+        """
+        Secondary login
+        return
+            - True, if success
+            - False, if fail
+        """
+        secondary_password = self._secondary_password
+        pwd_output = self._run_command(secondary_password)
+        if pwd_output == output:
+            return False
+        return pwd_output
+
+    def _is_path_exists(self, path):
         """Return whether the path exists"""
         try:
             self.sftp.stat(path)
@@ -223,42 +396,47 @@ class SSH(object):
         else:
             return True
 
-    def _get_output(self, command, clean=True):
-        output = self._recv_data()
-        if clean is not False:
-            output = _clean_output_info(output, command)
-        return output
-
-    def _recv_data(self):
+    def _recv_data(self, prompt=None):
         """Receive the command output"""
-        while not self.channel.recv_ready():
-            time.sleep(0.01)
-        res_list = []
-        time.sleep(0.2)  # Solve the problem of incomplete data
         # cmd_pattern = re.compile('.*[#$] ' + command) # Does not work with password entry
 
+        res_list = []
+        if type(prompt) is not str:
+            prompt = None
+
+        recv_ready_timeout = self._channel_timeout if self._channel_timeout > 0 else 6
+        recv_start = None
+        count = 0
+        recv_max_bytes = 1024
         while True:
-            data = self.channel.recv(1024)
+            if not self.channel.recv_ready():
+                now = datetime.now()
+                if recv_start is None:
+                    recv_start = now
+                else:
+                    if (now - recv_start).total_seconds() > recv_ready_timeout:
+                        if count == 0:
+                            raise socket.timeout()
+                        else:
+                            break
+                time.sleep(0.01)
+                continue
+            else:
+                recv_start = None
+                if count == 0:  # Solve the problem of incomplete data
+                    time.sleep(0.1)
+            count += 1
+            data = self.channel.recv(recv_max_bytes)
             info = data.decode()
             res = info.replace(' \r', '')
             res_list.append(res)
-            if len(info) < 1024:  # read speed > write speed
-                if info.endswith(self.recv_endswith):  # Cisco C9300:# /
-                    break
+            if len(info) < recv_max_bytes:  # read speed > write speed
+                if (prompt is not None and info.endswith(prompt)) or info.endswith(self.recv_endswith):
+                    time.sleep(0.02)  # Make sure recv is finished, info.endswith(self.recv_endswith) Not 100% sure
+                    if not self.channel.recv_ready():
+                        break
 
         return ''.join(res_list)
-
-
-def _get_command_arg(command, recv, clean):
-    if type(command) is dict:
-        _command = command.get('command')
-        _recv = command.get('recv') is not False if 'recv' in command else recv
-        _clean = command.get('clean') is not False if 'clean' in command else clean
-    else:
-        _command = command
-        _recv = recv
-        _clean = clean
-    return _command, _recv, _clean
 
 
 def _create_socket(hostname, port, timeout=0):
@@ -293,30 +471,69 @@ def _create_socket(hostname, port, timeout=0):
     return sock
 
 
-def _clean_output_info(txt, command):
+def _get_command_arg(command, recv, clean):
+    if type(command) is dict:
+        _command = command.get('command').strip()
+        _recv = command.get('recv') is not False if 'recv' in command else recv
+        _clean = command.get('clean') is not False if 'clean' in command else clean
+    else:
+        _command = command.strip()
+        _recv = recv
+        _clean = clean
+    return _command, _recv, _clean
+
+
+def _is_enable_command(command, sudo=False):
+    if sudo is True:
+        return command.lower().startswith('sudo ')
+    else:
+        return command.lower().startswith(('sudo ', 'enable'))
+
+
+def _clean_output(output, command, prompt):
     """
     Clear the redundant information.
     - Welcome info      ex)Welcome to Ubuntu...
     - Last login info   ex)Last login...
     - Path info         ex)[root@localhost ~]...
-    - Command info      ex)ls -l
+    - Command info      ex) [root@localhost ~] ls -l
+    - Return prompt     ex) [root@localhost ~]
 
     """
     # remove the start command  ex) ls -l
-    if txt.startswith(command):
-        txt = txt[len(command):].lstrip()
+    if output.startswith(command):
+        output = output[len(command):].lstrip()
 
-    # remove text before command ex) [root@localhost ~]# ls -l
-    cmd_pattern = re.compile('.*([#$])( )*' + re.escape(command))  # @2023-06-07 change ([#$])? --> ([#$])
-    last_match = None
-    for match in cmd_pattern.finditer(txt):
-        last_match = match
-    if last_match:
-        txt = txt[last_match.end():]
-    path_pattern = re.compile('.*[#$]( )?')  # @2023-07-06 change '.*[#$] ' --> '.*[#$]( )?'
-    txt = path_pattern.sub('', txt)  # remove the path info
-    txt = txt.replace(command + '\r\n', '')  # remove the command
-    return txt.strip()
+    prompt_matched = False
+    if type(prompt) is str:  # for show
+        # 1.remove text before command ex) [root@localhost ~]# ls -l
+        cmd_prompt = prompt + command
+        cmd_start = output.rfind(cmd_prompt)
+        if cmd_start > -1:
+            output = output[cmd_start + len(cmd_prompt):]
+        prompt_start = output.rfind(prompt)
+        # 2.remove the last prompt ex) [root@localhost ~]#
+        if prompt_start > -1:
+            output = output[:prompt_start]
+        prompt_matched = cmd_start > -1 or prompt_start > -1
+
+    if prompt_matched is False:  # for config
+        # 1.remove text before command ex) [root@localhost ~]# ls -l
+        cmd_pattern = re.compile('.*([#$])( )*' + re.escape(command))  # @2023-06-07 change ([#$])? --> ([#$])
+        last_match = None
+        for match in cmd_pattern.finditer(output):
+            last_match = match
+        if last_match:
+            output = output[last_match.end():]
+        # 2.remove the last prompt ex) [root@localhost ~]#
+        path_pattern = re.compile('.*[#$]( )?$')  # @2023-07-06 change '.*[#$] ' --> '.*[#$]( )?'
+        path_match = path_pattern.search(output)  # @2023-10-26 change sub()-->search(), '.*[#$]( )?'-->'.*[#$]( )?$'
+        if path_match:
+            path_match_start, path_match_end = path_match.span()
+            output = output[:path_match_start] + '' + output[path_match_end:]
+        output = output.replace(command + '\r\n', '')
+
+    return output.strip()
 
 
 def _remove_end_slash(path):

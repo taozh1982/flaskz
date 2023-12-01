@@ -13,6 +13,14 @@
 
 ## 版本
 
+- **1.6.4** `2023/12/01`
+    - [A] `BaseModelMixin`添加`refresh`方法, 用于更新当前模型对象
+    - [A] 添加`flaskz.models.refresh_instance`函数, 用于更新模型对象/列表
+    - [A] `model_to_dict`函数的`option`参数添加`filter`选项, 用于过滤模型对象列表
+    - [A] `flaskz.rest.register_model_query_pss_route`路由生成函数添加`get_pss_config`参数, 用于自定义pss查询参数
+    - [A] `flaskz.ext.ssh`添加`ssh_run_command`和`ssh_run_command_list`函数
+    - [A] `flaskz.ext.ssh`添加`connect_kwargs`和`channel_kwargs`参数以自定义connect和channel参数
+    - [A] `flaskz.ext.ssh`添加`timeout=10`参数默认值
 - **1.6.3** `2023/09/01`
     - [A] 添加`FLASKZ_DATABASE_SESSION_KWARGS`参数, 用于自定义`DBSession`参数
     - [C] `BaseModelMixin.add_db`和`BaseModelMixin.update_db`方法添加`refresh`操作, 以返回跟数据库同步的instance对象

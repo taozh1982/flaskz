@@ -4,7 +4,6 @@ import hashlib
 import json as _json
 import time
 import typing as _t
-import warnings
 from datetime import datetime
 from datetime import timezone
 from decimal import Decimal
@@ -70,13 +69,6 @@ class JSONWebSignatureSerializer(Serializer):
             signer_kwargs=None,
             algorithm_name=None,
     ):
-        warnings.warn(
-            "JWS support is deprecated and will be removed in"
-            " ItsDangerous 2.1. Use a dedicated JWS/JWT library such as"
-            " authlib.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
         super().__init__(
             secret_key,
             salt=salt,

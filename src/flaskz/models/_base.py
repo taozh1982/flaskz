@@ -157,6 +157,21 @@ class BaseModelMixin:
         return cls.__mapper__.relationships
 
     # -------------------------------------------About data-------------------------------------------
+    def refresh(self):
+        """
+        Expire and refresh attributes on the current instance.
+
+        .. versionadded:: 1.6.4
+
+        Example:
+            user = User.query_by({'name': 'flaskz'}, True)
+            # ...
+            user.refresh()
+
+        :return:
+        """
+        _refresh_instance(self)  # @2023-10-17 add
+
     def to_dict(self, option=None):
         """
         Convert model data to dict.
@@ -316,14 +331,14 @@ class BaseModelMixin:
         with _db_session(False, True) as session:
             session.add(instance)
             session.commit()
-            session.refresh(instance)
+            session.refresh(instance)  # If not, the value in the instance is not consistent with the database, and the query will be send until accessing the attributes.
 
         return instance
 
     @classmethod
     def bulk_add(cls, items, with_relationship=False):
         """
-        Perform a bulk add of the given list of mapping dictionaries
+        Perform a bulk add of the given list of mapping dictionaries.(atomic)
 
         sa version upgrade: https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html
         :param items:
@@ -382,18 +397,18 @@ class BaseModelMixin:
             return res_status_codes.db_data_not_found
 
         with _db_session(False, True) as session:
-            instance = session.query(cls).get(pk_value)  # Scenarios for extending BaseModelMixin instead of ModelMixin
+            instance = _session_get(session, cls, pk_value)  # session.query(cls).get(pk_value)  # Scenarios for extending BaseModelMixin instead of ModelMixin
             if instance is None:  # Object does not exist
                 return res_status_codes.db_data_not_found
             cls._update_ins(instance, data)  # @2022-12-01 change to ensure the updated instance and the setattr action in the same session
             session.commit()
-            session.refresh(instance)
+            session.refresh(instance)  # If not, the value in the instance is not consistent with the database, and the query will be send until accessing the attributes.
         return instance
 
     @classmethod
     def bulk_update(cls, items, with_relationship=False):
         """
-        Perform a bulk update of the given list of mapping dictionaries.
+        Perform a bulk update of the given list of mapping dictionaries.(atomic)
 
         sa version upgrade: https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html
         :param items:
@@ -408,7 +423,8 @@ class BaseModelMixin:
                 for data in items:
                     pk_value = cls._get_pk_value(data)
                     if pk_value is not None:
-                        cls._update_ins(session.query(cls).get(pk_value), data)  # @2022-12-01 change to ensure the updated instance and the setattr action in the same session
+                        # cls._update_ins(session.query(cls).get(pk_value), data)  # @2022-12-01 change to ensure the updated instance and the setattr action in the same session
+                        cls._update_ins(_session_get(session, cls, pk_value), data)  # @2022-12-01 change to ensure the updated instance and the setattr action in the same session
         else:
             with db_session() as session:
                 session.bulk_update_mappings(cls, items)
@@ -460,7 +476,8 @@ class BaseModelMixin:
             if is_dict(pk_value):  # @2023-03-27 add
                 instance = session.query(cls).filter_by(**pk_value).limit(1).first()
             else:
-                instance = session.query(cls).get(pk_value)
+                # instance = session.query(cls).get(pk_value)
+                instance = _session_get(session, cls, pk_value)
             if instance is None:  # Object does not exist
                 return res_status_codes.db_data_not_found
             session.delete(instance)
@@ -469,7 +486,7 @@ class BaseModelMixin:
     @classmethod
     def bulk_delete(cls, items):
         """
-        Perform a bulk delete of the given list of mapping dictionaries.
+        Perform a bulk delete of the given list of mapping dictionaries.(not atomic)
 
         .. versionupdated:: 1.0
 
@@ -588,7 +605,8 @@ class BaseModelMixin:
         :return:
         """
         with db_session(do_commit=False) as session:
-            instance = session.query(cls).get(pk_value)
+            # instance = session.query(cls).get(pk_value)
+            instance = _session_get(session, cls, pk_value)
         return instance
 
     @classmethod
@@ -843,5 +861,5 @@ class BaseModelMixin:
 # must
 from ..utils._cls import ins_to_dict
 from ..utils._common import find_list, filter_list, is_str, is_dict, is_list, get_dict_value_by_type
-from ._util import create_instance, create_relationships, db_session, append_query_filter, _db_session
+from ._util import create_instance, create_relationships, db_session, append_query_filter, _db_session, _session_get, _refresh_instance
 from ._query_util import get_col_op

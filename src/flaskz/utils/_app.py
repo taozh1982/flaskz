@@ -29,19 +29,22 @@ def init_app_config(app):
         app_config = config
 
 
-def get_app_config(key=None):
+def get_app_config(key=None, default=None):
     """
     Get the specified config value of the application.
     If the config is initialized by init_app_config, return the initialized config, otherwise return the config of the current application.
     If key is None return all config values(dict), otherwise return the specified config value
 
-    .. versionupdated:: 1.5
+    .. versionupdated::
+        1.5 -
+        1.6.4 - add default
 
     Example:
         get_app_config()                        # all Config
         get_app_config('FLASKZ_LOGGER_LEVEL')   # specified config value
 
     :param key:
+    :param default:
     :return:
     """
     config = None
@@ -55,7 +58,7 @@ def get_app_config(key=None):
 
     if key is None:
         return config
-    return config.get(key)
+    return config.get(key, default)
 
 
 def get_app_config_items(app):

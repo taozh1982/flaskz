@@ -46,7 +46,7 @@ def set_interval(interval, function, args=None, kwargs=None, immediately=False, 
     .. versionadded:: 1.0
 
     Example:
-        t = set_interval(10, print, ('Hello, World!',))
+        t = set_interval(10000, print, ('Hello, World!',)) # 10s
         # t.cancel()    # Stop the timer
 
     :param interval: time interval in milliseconds
@@ -68,7 +68,7 @@ def set_timeout(interval, function, args=None, kwargs=None, daemon=True):
      .. versionadded:: 1.0
 
     Example:
-        t = set_timeout(10, print, ('Hello, World!',))
+        t = set_timeout(10000, print, ('Hello, World!',)) # 10s
         # t.cancel()    # Stop the timer
 
     :param interval: delay time in milliseconds before the specified function is executed

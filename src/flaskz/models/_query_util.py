@@ -93,7 +93,7 @@ def parse_pss(cls, pss_config=None):
     # --------------------page--------------------
     page = pss_config.get('page') or {}
     offset = page.get('offset') or page.get('skip') or 0
-    limit = page.get('limit') or page.get('size') or 100000
+    limit = page.get('limit') or page.get('size')  # @2023-11-22 remove 'or 100000'
 
     # --------------------sort--------------------
     # @2022-04-10 fix exception subs2 = relationship('PerfTestSubModel2', cascade='all,delete-orphan', lazy='joined') ->
@@ -139,7 +139,6 @@ def _get_sorts(cls, sort):
     Get sort list.
     """
     orders = []
-    sorts = []
     if is_list(sort):
         sorts = sort
     else:  # @2023-08-31 elif is_dict(sort):-->else
@@ -256,4 +255,5 @@ def get_col_op(column, operator, value):
     return column.op(operator)(value)
 
 
-from ..utils import get_dict, is_str, is_dict, is_list
+from ..utils import is_str, is_dict, is_list
+from ..utils._private import get_dict

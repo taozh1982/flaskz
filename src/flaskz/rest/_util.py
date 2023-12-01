@@ -47,10 +47,10 @@ def rest_login_required():
     return decorate
 
 
-def rest_permission_required(module, op_permission=None):
+def rest_permission_required(module, action=None):  # @2023-10-10, op_permission--> action
     """
     If you decorate a view with this, it will ensure that the current user.
-    has the module permission and operation permission before calling the actual view.
+    has the module permission and action permission before calling the actual view.
 
     Example:
         @sys_mgmt_bp.route('/role/', methods=['GET'])
@@ -63,8 +63,8 @@ def rest_permission_required(module, op_permission=None):
         def sys_role_add():
             pass
 
-    :param module:
-    :param op_permission:
+    :param module: module permission to be checked
+    :param action: action permission to be checked
     :return:
     """
 
@@ -74,7 +74,7 @@ def rest_permission_required(module, op_permission=None):
             check_result = True
             permission_check_callback = get_current_model_rest_manager_callback('permission_check_callback')
             if permission_check_callback:
-                check_result = permission_check_callback(module, op_permission)
+                check_result = permission_check_callback(module, action)
             if check_result is not True:
                 return check_result
             return func(*args, **kwargs)

@@ -2,48 +2,69 @@ from collections.abc import Mapping
 
 __all__ = [
     'filter_list', 'find_list', 'merge_list', 'each_list', 'get_list',
-    'get_dict', 'del_dict_keys', 'get_deep', 'set_deep', 'merge_dict', 'get_ins_mapping', 'get_dict_mapping', 'get_dict_value_by_type',
+    'pop_dict_keys', 'del_dict_keys', 'get_deep', 'set_deep', 'merge_dict', 'get_ins_mapping', 'get_dict_mapping', 'get_dict_value_by_type',
     'is_list', 'is_dict', 'slice_str',
-    'get_wrap_str', 'is_str', 'str_replace',
-    'bulk_append_child'
+    'get_wrap_str', 'is_str', 'str_replace', 'str_contains_any',
+    'bulk_append_child',
+    'parse_version'
 ]
 
 
 # -------------------------------------------list-------------------------------------------
-def filter_list(item_list, func, with_index=False):
+
+def filter_list(items, func=None, with_index=False, not_none=False):
     """
     Filter the list and return a new list that matches the conditions
-    :param with_index:
-    :param item_list:
+    If func is None and not_none is True, return the not None items.
+
+   .. versionupdated::
+        1.6.4 - add not_none param
+
+    Example:
+        filter_list(items, not_none=True)
+        filter_list(items, lambda item: item is not None)
+        filter_list(items, lambda index, item: index > 10 and item is not None, True)
+
+    :param items:
     :param func:
+    :param with_index:
+    :param not_none:
     :return:
     """
+    if func is None and not_none is True:  # @2023-11-20 add
+        func = _is_not_none
+
     if with_index is True:
-        return _filter_list_with_index(item_list, func)
+        return _filter_list_with_index(items, func)
 
-    return list(filter(func, item_list))
+    return list(filter(func, items))
 
 
-def _filter_list_with_index(item_list, func):
+def _filter_list_with_index(items, func):
     result = []
-    for index, item in enumerate(item_list):
+    for index, item in enumerate(items):
         if func(item, index) is True:
             result.append(item)
     return result
 
 
-def find_list(item_list, func, with_index=False):
+def find_list(items, func, with_index=False):
     """
     Find an object from the list that matches the conditions
+
+    Example:
+        find_list(items, lambda item: item.get('id') == 10)
+        find_list(items, lambda index, item: index > 0 and item.get('id') == 10 , True)
+
     :param with_index:
-    :param item_list:
+    :param items:
     :param func:
     :return:
     """
     if with_index is True:
-        return _find_list_with_index(item_list, func)
+        return _find_list_with_index(items, func)
 
-    for item in item_list:
+    for item in items:
         if func(item) is True:
             return item
     return None
@@ -56,88 +77,103 @@ def _find_list_with_index(item_list, func):
     return None
 
 
-def merge_list(lst, *to_merged_list):
+def merge_list(target_list, *merged_list):
     """
     Merge multiple lists into the first list
-    :param lst:
-    :param to_merged_list:
+
+    Example:
+        nums = [0, 1]
+        merge_list(nums, [2, 3], [4, 5]) # nums = [0, 1, 2, 3, 4, 5]
+
+    :param target_list:
+    :param merged_list:
     :return:
     """
-    for item in to_merged_list:
-        lst.extend(item)
-    return lst
+    for item in merged_list:
+        target_list.extend(item)
+    return target_list
 
 
-def each_list(item_list, func, with_index=True):
+def each_list(items, func, with_index=True):
     """
     Iterate each object in the list and execute the callback function
+
+    Example:
+        each_list(items, lambda item: item['selected'] = True)
+
     :param with_index:
-    :param item_list:
+    :param items:
     :param func:
     :return:
     """
     if with_index is True:
-        return _each_list_with_index(item_list, func)
+        return _each_list_with_index(items, func)
 
-    for item in item_list:
+    for item in items:
         if func(item) is False:
             return
 
 
-def _each_list_with_index(item_list, func):
-    for index, item in enumerate(item_list):
+def _each_list_with_index(items, func):
+    for index, item in enumerate(items):
         if func(item, index) is False:
             return
 
 
-def get_list(obj, default=None):
+def get_list(items, default=None):
     """
     Get the list instance
     -- If obj is a list, just return
     -- If obj is not a list, return default or []
-    :param obj:
+    :param items:
     :param default:
     :return:
     """
-    return obj if is_list(obj) else (default or [])
+    return items if is_list(items) else (default or [])
 
 
 # -------------------------------------------dict-------------------------------------------
-def get_dict(obj, default=None):
-    """
-     Get the dict instance
-    -- If obj is a dict, just return
-    -- If obj is not a dict, return default or {}
 
-    :param obj:
-    :param default:
-    :return:
+def pop_dict_keys(d, keys):
     """
-    return obj if is_dict(obj) else (default or {})
+    Pop the specified keys from the dict object
 
+    Example:
+        pop_dict_keys(a_dict, ['name', 'age'])
+        pop_dict_keys(a_dict, 'name')
 
-def del_dict_keys(obj, keys):
-    """
-    Delete the specified keys from the dict object
-    :param obj:
+    :param d:
     :param keys:
     :return:
     """
+    if type(keys) is not list:
+        keys = [keys]
+    result = {}
     for key in keys:
-        obj.pop(key, None)
+        result[key] = d.pop(key, None)
+    return result
 
 
-def get_deep(obj, key, key_split='.', default=None, raising=False):
+del_dict_keys = pop_dict_keys
+
+
+def get_deep(d: dict, key: str, key_split='.', default=None, raising=False):
     """
     Get the deep value of the specified key from the dict object
-    :param obj:
+
+    Example:
+        get_deep(a_dict, 'address.city')
+        get_deep(a_dict, 'address/city', key_split='/')
+
+
+    :param d:
     :param key:
     :param key_split:
     :param default:
     :param raising:
     :return:
     """
-    value = obj
+    value = d
     try:
         for key in key.split(key_split):
             if isinstance(value, dict):
@@ -155,16 +191,21 @@ def get_deep(obj, key, key_split='.', default=None, raising=False):
         return value
 
 
-def set_deep(obj, key, value, key_split='.'):
+def set_deep(d: dict, key: str, value, key_split='.'):
     """
     Set the deep value of the specified key from the dict object
-    :param obj:
+
+    Example:
+        set_deep(a_dict, 'address.city', 'New York')
+        set_deep(a_dict, 'address/city', 'New York', key_split='/')
+
+    :param d:
     :param key:
     :param value:
     :param key_split:
     :return:
     """
-    dd = obj
+    dd = d
     keys = key.split(key_split)
     latest = keys.pop()
     for k in keys:
@@ -172,14 +213,19 @@ def set_deep(obj, key, value, key_split='.'):
     dd[latest] = value
 
 
-def get_ins_mapping(ins_list, attr, deep=False):
+def get_ins_mapping(ins_list: list, attr: str, deep=False):
     """
     Create a dict map of the specified object list with the specified attribute
+
+    Example:
+        get_ins_mapping([User(name='a'), User(name='b', User(name='c')], 'name')  # {'a':user_c, 'b':user_b, 'c':user_c}
+
     :param ins_list:
     :param attr:
     :param deep:
     :return:
     """
+
     map_dict = {}
     if deep is True:
         keys = attr.split('.')
@@ -195,9 +241,14 @@ def get_ins_mapping(ins_list, attr, deep=False):
     return map_dict
 
 
-def get_dict_mapping(dict_list, key='id', key_join="+"):
+def get_dict_mapping(dict_list: list, key='id', key_join="+"):
     """
     Create a dict map of the specified dict list withe the specified key
+
+    Example:
+        get_dict_mapping([{'name': 'a'}, {'name': 'b'}, {'name': 'c'}], 'name')  # {'a':dict_a, 'b':dict_b, 'c':dict_c}
+
+
     :param dict_list:
     :param key:
     :param key_join:
@@ -216,7 +267,7 @@ def get_dict_mapping(dict_list, key='id', key_join="+"):
     return map_dict
 
 
-def merge_dict(dct, *merged_dict_list):
+def merge_dict(d: dict, *merged_dict_list):
     """
     Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
     updating only top-level keys, dict_merge recurses down into dicts nested
@@ -225,37 +276,44 @@ def merge_dict(dct, *merged_dict_list):
 
     .. versionupdated:: 1.5 - return dct
 
-    :param dct: dict onto which the merge is executed
+    Example:
+        merge_dict(target_dict, a_dict, b_dict)
+
+    :param d: dict onto which the merge is executed
     :param merged_dict_list: dct merged into dct
     :return: dct
     """
     for dict_item in merged_dict_list:
         for k, v in dict_item.items():  # 2022-04-22 dict_item.iteritems-->dict_item.items
-            if (k in dct and isinstance(dct[k], dict)
+            if (k in d and isinstance(d[k], dict)
                     and isinstance(dict_item[k], Mapping)):
-                merge_dict(dct[k], dict_item[k])
+                merge_dict(d[k], dict_item[k])
             else:
-                dct[k] = dict_item[k]
-    return dct  # @2023-04-12 add result
+                d[k] = dict_item[k]
+    return d  # @2023-04-12 add result
 
 
-def get_dict_value_by_type(obj, key, value_type, default=None, by_instance=False):
+def get_dict_value_by_type(d: dict, key: str, value_type, default=None, use_isinstance=False):
     """
     Get the dict value of the specified key, if value is not the instance of the specified type, return default value.
 
     .. versionadded:: 1.2
 
-    :param obj:
+    Example
+        get_dict_value_by_type(a_dict, 'name', str)
+        get_dict_value_by_type(a_dict, 'age', int, 10)
+
+    :param d:
     :param key:
     :param value_type:
     :param default:
-    :param by_instance:
+    :param use_isinstance:
     :return:
     """
-    if key not in obj:
+    if key not in d:
         return default
-    value = obj.get(key)
-    if by_instance is True:
+    value = d.get(key)
+    if use_isinstance is True:
         if value_type is int and (value is True or value is False):  # instance(True,input) == True
             return default
         if isinstance(value, value_type):
@@ -267,41 +325,53 @@ def get_dict_value_by_type(obj, key, value_type, default=None, by_instance=False
 
 
 # -------------------------------------------type-------------------------------------------
-def is_str(value, by_instance=False):
+def is_str(value, use_isinstance=False):
     """
     Check whether the value is string.
 
+    Example:
+        is_str('str') # True
+        is_str(1) # False
+
     :param value:
-    :param by_instance:
+    :param use_isinstance:
     :return:
     """
-    if by_instance is True:
+    if use_isinstance is True:
         return isinstance(value, str)
     return type(value) == str
 
 
-def is_list(value, by_instance=False):
+def is_list(value, use_isinstance=False):
     """
     Check whether the value is list object.
 
+    Example:
+        is_list([]) # True
+        is_list('abc') # False
+
     :param value:
-    :param by_instance:
+    :param use_isinstance:
     :return:
     """
-    if by_instance is True:
+    if use_isinstance is True:
         return isinstance(value, list)
     return type(value) == list
 
 
-def is_dict(value, by_instance=False):
+def is_dict(value, use_isinstance=False):
     """
     Check whether the value is dict object.
 
+    Example:
+        is_dict({}) # True
+        is_list('abc') # False
+
     :param value:
-    :param by_instance:
+    :param use_isinstance:
     :return:
     """
-    if by_instance is True:
+    if use_isinstance is True:
         return isinstance(value, dict)
     return type(value) == dict
 
@@ -321,20 +391,20 @@ def get_wrap_str(*items):
     return '\n'.join(result)
 
 
-def slice_str(value, start_len=6, end_len=0, ellipsis_str='......'):
+def slice_str(string, start_len=6, end_len=0, ellipsis_str='......'):
     if end_len != 0:
         end_len = -abs(end_len)
 
-    value = str(value)
-    if len(value) <= (start_len - end_len):
-        return value
-    result = value[0:start_len]
+    string = str(string)
+    if len(string) <= (start_len - end_len):
+        return string
+    result = string[0:start_len]
     if end_len != 0:
-        result = result + ellipsis_str + value[end_len:]
+        result = result + ellipsis_str + string[end_len:]
     return result
 
 
-def str_replace(txt, old, new=''):
+def str_replace(string, old, new=''):
     """
     Return a copy with all occurrences of substring old replaced by new.
 
@@ -345,7 +415,7 @@ def str_replace(txt, old, new=''):
         str_replace('abca',{'a':'A','b':'B'})   # ABcA
         str_replace('abca',['a','b'],"*")       # **c*
 
-    :param txt:
+    :param string:
     :param old:
     :param new:
     :return:
@@ -353,17 +423,31 @@ def str_replace(txt, old, new=''):
     v_type = type(old)
     if v_type is dict:
         for key in old:
-            txt = txt.replace(key, old[key])
+            string = string.replace(key, old[key])
     elif v_type is list:
         for item in old:
-            txt = txt.replace(item, new)
+            string = string.replace(item, new)
     else:
-        txt = txt.replace(old, new)
-    return txt
+        string = string.replace(old, new)
+    return string
+
+
+def str_contains_any(string, substrings):
+    """
+    Check whether any substring is in the specified string.
+
+    Example:
+        str_contains_any('Cisco Nexus Operating System', ['Cisco', 'Nexus']) # True
+
+    :param string: the specified string
+    :param substrings: the substring list
+    :return:
+    """
+    return any(sub in string for sub in substrings)
 
 
 # -------------------------------------------other-------------------------------------------
-def bulk_append_child(items, parent_map, item_parent_key='parent_id', children_key="children", parent_map_key='id'):
+def bulk_append_child(items, parents, item_parent_key='parent_id', children_key="children", parent_map_key='id'):
     """
     Append the items to the child list of the matched parent object.
 
@@ -372,7 +456,7 @@ def bulk_append_child(items, parent_map, item_parent_key='parent_id', children_k
 
     :param items:
     :param item_parent_key:
-    :param parent_map:
+    :param parents:
     :param children_key:
     :param parent_map_key:
     :return:
@@ -380,12 +464,49 @@ def bulk_append_child(items, parent_map, item_parent_key='parent_id', children_k
     if not isinstance(items, list):
         items = [items]
 
-    if isinstance(parent_map, list):
-        parent_map = get_dict_mapping(parent_map, parent_map_key)
+    if isinstance(parents, list):
+        parents = get_dict_mapping(parents, parent_map_key)
 
     for item in items:
         parent_attr = item.get(item_parent_key)
-        parent_item = parent_map.get(parent_attr)
+        parent_item = parents.get(parent_attr)
         if isinstance(parent_item, dict):
             p_children = parent_item[children_key] = parent_item.get(children_key) or []
             p_children.append(item)
+
+
+def parse_version(version):
+    """
+    Parse version string to int list, if version is integer, it will be converted to int
+
+    Example:
+        parse_version(sqlalchemy.__version__)   # --> [2, 0, 20] / [2, 0, '0rc1']
+
+    :param version: the version to be parsed, str/int/float/package
+    """
+    version_type = type(version)
+
+    if version_type is int:  # 1-->1
+        return [version]
+
+    if version_type is float:  # 1.2-->[1,2]
+        version = str(version)
+    elif version_type is not str:  # sqlalchemy,sys
+        version = getattr(version, '__version__', None) or getattr(version, 'version', None)
+
+    if type(version) is not str:
+        return []
+
+    versions = []
+    for v in version.split('.'):
+        if v.isdigit():
+            versions.append(int(v))
+        else:
+            versions.append(v)
+    return versions
+
+
+# -------------------------------------------private-------------------------------------------
+
+def _is_not_none(item, *args, **kwargs):
+    return item is not None

@@ -1,17 +1,18 @@
 from contextlib import contextmanager
 
+import sqlalchemy
 from flask import g
-from sqlalchemy import text, or_, and_
+from sqlalchemy import text, or_, and_, inspect
 
 from . import DBSession
 from ._base import BaseModelMixin
-from ..utils import get_g_cache, set_g_cache, remove_g_cache
+from ..utils import get_g_cache, set_g_cache, remove_g_cache, parse_version
 
 __all__ = ['create_instance', 'create_relationships',
            'query_all_models', 'query_multiple_model',
            'append_debug_queries', 'get_debug_queries', 'append_query_filter',
            'get_db_session', 'db_session', 'close_db_session',
-           'model_to_dict',
+           'model_to_dict', 'refresh_instance',
            'is_model_mixin_instance'
            ]
 
@@ -254,15 +255,26 @@ def model_to_dict(ins, option=None):
 
     Example:
         result = Role.update(request_json)
-        res_data = model_to_dict(result[1], {'cascade': 1})
+        res_data = model_to_dict(result[1], {
+            'cascade': 1
+            # 'filter': lambda ins: ins.type == 'local'
+        })
 
     :param ins:
     :param option:
     :return:
     """
+
     if isinstance(ins, list):
         data_list = []
+        ins_filter = None
+        if type(option) is dict:
+            ins_filter = option.get('filter')
+        if not callable(ins_filter):
+            ins_filter = None
         for item in ins:
+            if ins_filter and ins_filter(item) is not True:  # 2023-09-19: add
+                continue
             if is_model_mixin_instance(item):  # @2022-11-28: change, ModelMixin --> BaseModelMixin
                 data_list.append(item.to_dict(option))
             else:
@@ -272,6 +284,43 @@ def model_to_dict(ins, option=None):
         return ins.to_dict(option)
     else:
         return ins
+
+
+def refresh_instance(ins):
+    """
+    Expire and refresh attributes on the given instance/list
+
+    .. versionadded:: 1.6.4
+
+    Example:
+        user = User.query_by({'name': 'flaskz'}, True)
+        # ...
+        refresh_instance(user)
+
+        user_list = User.query_by({'name': 'flaskz'})
+        # ...
+        refresh_instance(user_list)
+
+    :param ins:
+    :return:
+    """
+    if ins is None:
+        return
+    if not isinstance(ins, list):
+        ins_list = [ins]
+    else:
+        ins_list = ins
+    for item in ins_list:
+        _refresh_instance(item)
+
+
+def _refresh_instance(ins):  # @2023-10-17 add
+    if not is_model_mixin_instance(ins):
+        return
+    ins_inspect = inspect(ins)
+    ins_session = ins_inspect.session
+    if ins_session and ins_session.is_active is True:
+        ins_session.refresh(ins)
 
 
 def is_model_mixin_instance(obj):
@@ -291,3 +340,14 @@ def _has_g_context():
         return False
     return True
     # return has_request_context() or g is not None
+
+
+_sa_version = parse_version(sqlalchemy.__version__)
+if _sa_version[0] > 2 or _sa_version[0] > 1 and _sa_version[1] >= 4:
+    def _session_get(session, cls, ident):
+        """Return an instance based on the given primary key identifier, or None if not found."""
+        return session.get(cls, ident)
+else:
+    def _session_get(session, cls, ident):
+        """Return an instance based on the given primary key identifier, or None if not found."""
+        return session.query(cls).get(ident)
