@@ -1,3 +1,5 @@
+import warnings
+
 from flask import request
 
 __all__ = ['get_remote_addr', 'is_ajax', 'get_request_json', 'get_pss']
@@ -43,4 +45,9 @@ def get_request_json(*args):
     return data
 
 
-from ..models._query_util import parse_pss as get_pss
+def get_pss(*args, **kwargs):
+    warnings.warn('flaskz.utils.get_pss() has been replaced by flaskz.models.parse_pss()', category=DeprecationWarning)
+    return parse_pss(*args, **kwargs)
+
+
+from ..models._query_util import parse_pss

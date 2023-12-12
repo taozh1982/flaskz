@@ -249,7 +249,7 @@ class ModelMixin(BaseModelMixin):
         Used in router to return query data.
 
         Example:
-            result, ins_list = TemplateModel.query_pss(get_pss(   # use flaskz.utils.get_pss to format condition
+            result, ins_list = TemplateModel.query_pss(parse_pss(   # use flaskz.models.parse_pss to parse pss payload
                 TemplateModel, {   # FROM templates
                     "search": {                         # WHERE
                         "like": "t",                    # name like '%t%' OR description like '%t%' (TemplateModel.like_columns = ['name', description])
@@ -258,6 +258,7 @@ class ModelMixin(BaseModelMixin):
                             "<": 20
                         },
                         "email": "taozh@focus-ui.com",  # AND (email='taozh@focus-ui.com')
+                        # "address.city": "New York",   # *relation
                         "_ors": {                       # AND (country='America' OR country='Canada')
                             "country": "America||Canada"
                         },

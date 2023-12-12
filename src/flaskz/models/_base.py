@@ -653,8 +653,11 @@ class BaseModelMixin:
         Please use flaskz.utils.get_pss to parse option first.
         pss = page+search+sort
 
+        .. versionupdated::
+            - 1.6.5: add relation search and page
+
         Example:
-            result = TemplateModel.query_pss(get_pss(   # use flaskz.utils.get_pss to format condition
+            result = TemplateModel.query_pss(parse_pss(   # use flaskz.models.parse_pss to parse pss payload
                 TemplateModel, {   # FROM templates
                     "search": {                         # WHERE
                         "like": "t",                    # name like '%t%' OR description like '%t%' (TemplateModel.like_columns = ['name', description])
@@ -663,6 +666,7 @@ class BaseModelMixin:
                             "<": 20
                         },
                         "email": "taozh@focus-ui.com",  # AND (email='taozh@focus-ui.com')
+                        # "address.city": "New York",   # *relation
                         "_ors": {                       # AND (country='America' OR country='Canada')
                             "country": "America||Canada"
                         },
@@ -679,7 +683,7 @@ class BaseModelMixin:
                     },
                     # "sort":[                          # ORDER BY templates.name ASC, templates.age DESC
                     #     {"field": "name", "order": "asc"},
-                    #     {field": "age", "order": "desc"}
+                    #     {field": "address.city", "order": "desc"} # *relation
                     # ],
                     "page": {                           # LIMIT ? OFFSET ? (20, 0)
                         "offset": 0,
@@ -710,10 +714,12 @@ class BaseModelMixin:
         Return the count of the specified search, if search option is None, return the count of all data.
 
         .. versionadded:: 1.6
+        .. versionupdated::
+            - 1.6.5: add relation search and page
 
         Example:
             SysActionLog.count()
-            SysActionLog.count(get_pss(   # use flaskz.utils.get_pss to format condition
+            SysActionLog.count(parse_pss(   # use flaskz.models.parse_pss to parse pss payload
                 TemplateModel, {   # FROM templates
                     "search": {                         # WHERE
                         "like": "t",                    # name like '%t%' OR description like '%t%' (TemplateModel.like_columns = ['name', description])
@@ -722,6 +728,7 @@ class BaseModelMixin:
                             "<": 20
                         },
                         "email": "taozh@focus-ui.com",  # AND (email='taozh@focus-ui.com')
+                        # "address.city": "New York",   # *relation
                         "_ors": {                       # AND (country='America' OR country='Canada')
                             "country": "America||Canada"
                         },
@@ -741,9 +748,8 @@ class BaseModelMixin:
     @classmethod
     def _query_pss(cls, pss_option, return_count=False):
         pss_option = pss_option or {}
-        filter_likes = pss_option.get('filter_likes', [])
-        filter_ands = pss_option.get('filter_ands', [])
-        filter_ors = pss_option.get('filter_ors', [])
+
+        relationships_pss = pss_option.get('relationships', {})
 
         group = pss_option.get('group', [])
 
@@ -764,15 +770,11 @@ class BaseModelMixin:
         with db_session(do_commit=False) as session:
             query = session.query(cls)
 
-            query = append_query_filter(query, filter_likes, 'or')
-            query = append_query_filter(query, filter_ands, 'and')
-            query = append_query_filter(query, filter_ors, 'or')
-            # if len(filter_likes) > 0:
-            #     query = query.filter(text('(' + (' OR '.join(filter_likes)) + ')'))
-            # if len(filter_ands) > 0:
-            #     query = query.filter(text('(' + (' AND '.join(filter_ands)) + ')'))
-            # if len(filter_ors) > 0:
-            #     query = query.filter(text('(' + (' OR '.join(filter_ors)) + ')'))
+            for relationship_cls, relationship_pss_option in relationships_pss.items():  # @2023-12-05 add
+                query = query.outerjoin(relationship_cls)
+                query = _append_pss_query_filters(query, relationship_pss_option)
+
+            query = _append_pss_query_filters(query, pss_option)
 
             # if len(distinct) > 0:
             #     query.distinct(*distinct)
@@ -861,5 +863,5 @@ class BaseModelMixin:
 # must
 from ..utils._cls import ins_to_dict
 from ..utils._common import find_list, filter_list, is_str, is_dict, is_list, get_dict_value_by_type
-from ._util import create_instance, create_relationships, db_session, append_query_filter, _db_session, _session_get, _refresh_instance
+from ._util import create_instance, create_relationships, db_session, append_query_filter, _db_session, _session_get, _refresh_instance, _append_pss_query_filters
 from ._query_util import get_col_op

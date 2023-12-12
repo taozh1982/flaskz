@@ -325,6 +325,7 @@ def get_dict_value_by_type(d: dict, key: str, value_type, default=None, use_isin
 
 
 # -------------------------------------------type-------------------------------------------
+
 def is_str(value, use_isinstance=False):
     """
     Check whether the value is string.
@@ -377,6 +378,7 @@ def is_dict(value, use_isinstance=False):
 
 
 # -------------------------------------------str-------------------------------------------
+
 def get_wrap_str(*items):
     """
     Use '\n' to join multiple strings.

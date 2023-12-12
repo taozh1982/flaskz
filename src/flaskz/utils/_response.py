@@ -99,6 +99,12 @@ class ResponseManager:
         app.response_manager = self
 
     def get_response(self, get_response):
+        """
+        Set response callback function.
+
+        :param get_response:
+        :return:
+        """
         self._get_response = get_response
 
     @property

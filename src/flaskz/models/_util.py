@@ -1,12 +1,11 @@
 from contextlib import contextmanager
 
-import sqlalchemy
 from flask import g
 from sqlalchemy import text, or_, and_, inspect
 
 from . import DBSession
 from ._base import BaseModelMixin
-from ..utils import get_g_cache, set_g_cache, remove_g_cache, parse_version
+from ..utils import get_g_cache, set_g_cache, remove_g_cache
 
 __all__ = ['create_instance', 'create_relationships',
            'query_all_models', 'query_multiple_model',
@@ -122,6 +121,13 @@ def get_debug_queries():
     if _has_g_context():  # @2022-07-26 add,
         return getattr(g, 'z_debug_queries', [])
     return []
+
+
+def _append_pss_query_filters(query, pss_option):
+    query = append_query_filter(query, pss_option.get('filter_likes', []), 'or')
+    query = append_query_filter(query, pss_option.get('filter_ands', []), 'and')
+    query = append_query_filter(query, pss_option.get('filter_ors', []), 'or')
+    return query
 
 
 def append_query_filter(query, filters, joined):  # @2023-06-21 add
@@ -342,12 +348,16 @@ def _has_g_context():
     # return has_request_context() or g is not None
 
 
-_sa_version = parse_version(sqlalchemy.__version__)
-if _sa_version[0] > 2 or _sa_version[0] > 1 and _sa_version[1] >= 4:
-    def _session_get(session, cls, ident):
-        """Return an instance based on the given primary key identifier, or None if not found."""
-        return session.get(cls, ident)
-else:
-    def _session_get(session, cls, ident):
-        """Return an instance based on the given primary key identifier, or None if not found."""
-        return session.query(cls).get(ident)
+# _sa_version = parse_version(sqlalchemy.__version__)
+# if _sa_version[0] > 2 or _sa_version[0] > 1 and _sa_version[1] >= 4:
+#     def _session_get(session, cls, ident):
+#         """Return an instance based on the given primary key identifier, or None if not found."""
+#         return session.get(cls, ident)
+# else:
+#     def _session_get(session, cls, ident):
+#         """Return an instance based on the given primary key identifier, or None if not found."""
+#         return session.query(cls).get(ident)
+
+def _session_get(session, cls, ident):  # @2023-12-08 update sqlalchemy and replace session.query(cls).get(ident) --> session.get(cls, ident)
+    """Return an instance based on the given primary key identifier, or None if not found."""
+    return session.get(cls, ident)
