@@ -5,8 +5,9 @@ def get_list_args(params, args):  # @2022-05-11: add
     """
     Returns a single new list combining keys and args.
 
-    def xxx(names, *args):
-        print(get_list_args(names, args))
+    Example:
+        def xxx(names, *args):
+            print(get_list_args(names, args))
 
     xxx('a', ['b', 'c'])    -->['a', 'b', 'c']
     xxx('a', 'b', 'c')      -->['a', 'b', 'c']

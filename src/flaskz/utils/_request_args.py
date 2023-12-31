@@ -7,7 +7,7 @@ __all__ = ['get_remote_addr', 'is_ajax', 'get_request_json', 'get_pss']
 
 def get_remote_addr():
     """
-    Get the remote ip address.
+    Get the remote ip address of the current request.
 
     :return:
     """
@@ -18,6 +18,7 @@ def get_remote_addr():
 def is_ajax():
     """
     Check if the request is an ajax request.
+
     :return:
     """
     if request:

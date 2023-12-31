@@ -1,7 +1,3 @@
-"""
-Not included by default.
-If use it, please install the 'requests' package first
-"""
 import inspect
 import textwrap
 from urllib import parse as urllib_parse

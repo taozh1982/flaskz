@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 
 from flask import g
-from sqlalchemy import text, or_, and_, inspect
+from sqlalchemy import text, or_, and_, inspect, BinaryExpression
 
 from . import DBSession
 from ._base import BaseModelMixin
@@ -124,13 +124,16 @@ def get_debug_queries():
 
 
 def _append_pss_query_filters(query, pss_option):
-    query = append_query_filter(query, pss_option.get('filter_likes', []), 'or')
+    query = append_query_filter(query, pss_option.get('filter_likes', []), 'and')
+    # query = append_query_filter(query, pss_option.get('filter_notlikes', []), 'and')
     query = append_query_filter(query, pss_option.get('filter_ands', []), 'and')
     query = append_query_filter(query, pss_option.get('filter_ors', []), 'or')
+
+    # query = append_query_filter(query, pss_option.get('filters', []), 'and')  # for search
     return query
 
 
-def append_query_filter(query, filters, joined):  # @2023-06-21 add
+def append_query_filter(query, filters, joined=None):  # @2023-06-21 add
     """
     Append filters to the query
     :param query:
@@ -140,6 +143,22 @@ def append_query_filter(query, filters, joined):  # @2023-06-21 add
     """
     if len(filters) == 0:
         return query
+
+    text_items = []
+    binary_expression_items = []
+    clause_items = []
+    for item in filters:
+        item_type = type(item)
+        if item_type is str:
+            text_items.append(item)
+        elif item_type is BinaryExpression:
+            binary_expression_items.append(item)
+        else:
+            clause_items.append(item)  # and(ed) / or(ed)
+
+    if len(clause_items) > 0:
+        query = query.filter(*clause_items)
+
     joined = joined.lower()
     if joined == 'or':
         joined_text = ' OR '
@@ -150,17 +169,8 @@ def append_query_filter(query, filters, joined):  # @2023-06-21 add
     else:
         return query
 
-    text_items = []
-    binary_expression_items = []
-    for item in filters:
-        if type(item) is str:
-            text_items.append(item)
-        else:
-            binary_expression_items.append(item)
-
     if len(text_items) > 0:
         query = query.filter(text('(' + (joined_text.join(text_items)) + ')'))
-
     if len(binary_expression_items) > 0:
         query = query.filter(joined_func(*binary_expression_items))
 

@@ -19,6 +19,7 @@ def get_dict(d, default=None):
 def contains_any(collection, targets):
     """
     Checks whether the collection contains any item
+
     :param collection:
     :param targets:
     :return:
@@ -29,3 +30,16 @@ def contains_any(collection, targets):
     elif collection_type is list:
         return any(element in collection for element in targets)
     return False
+
+
+def vie(condition, true_value, false_value):
+    """
+    If condition is True value return true_value, else return false_value
+    False/None/0/''/()/{}/[] is false value
+
+    :param condition:
+    :param true_value:
+    :param false_value:
+    :return:
+    """
+    return true_value if condition else false_value

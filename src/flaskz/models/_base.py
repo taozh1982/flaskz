@@ -654,7 +654,7 @@ class BaseModelMixin:
         pss = page+search+sort
 
         .. versionupdated::
-            - 1.6.5: add relation search and page
+            - 1.7.0: add relationship-related search and sort
 
         Example:
             result = TemplateModel.query_pss(parse_pss(   # use flaskz.models.parse_pss to parse pss payload
@@ -667,6 +667,9 @@ class BaseModelMixin:
                         },
                         "email": "taozh@focus-ui.com",  # AND (email='taozh@focus-ui.com')
                         # "address.city": "New York",   # *relation
+                        # "address": {                  # *relation like
+                        #     "like": True
+                        # },
                         "_ors": {                       # AND (country='America' OR country='Canada')
                             "country": "America||Canada"
                         },
@@ -715,7 +718,7 @@ class BaseModelMixin:
 
         .. versionadded:: 1.6
         .. versionupdated::
-            - 1.6.5: add relation search and page
+            - 1.7.0: add relationship-related search and sort
 
         Example:
             SysActionLog.count()
@@ -729,6 +732,9 @@ class BaseModelMixin:
                         },
                         "email": "taozh@focus-ui.com",  # AND (email='taozh@focus-ui.com')
                         # "address.city": "New York",   # *relation
+                        # "address": {                  # *relation like
+                        #     "like": True
+                        # },
                         "_ors": {                       # AND (country='America' OR country='Canada')
                             "country": "America||Canada"
                         },
@@ -770,10 +776,11 @@ class BaseModelMixin:
         with db_session(do_commit=False) as session:
             query = session.query(cls)
 
+            # 1. outerjoin
             for relationship_cls, relationship_pss_option in relationships_pss.items():  # @2023-12-05 add
                 query = query.outerjoin(relationship_cls)
                 query = _append_pss_query_filters(query, relationship_pss_option)
-
+            # 2. filter cls and relationship_cls
             query = _append_pss_query_filters(query, pss_option)
 
             # if len(distinct) > 0:

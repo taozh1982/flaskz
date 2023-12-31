@@ -11,7 +11,6 @@ __all__ = [
 
 
 # -------------------------------------------list-------------------------------------------
-
 def filter_list(items, func=None, with_index=False, not_none=False):
     """
     Filter the list and return a new list that matches the conditions
@@ -133,7 +132,6 @@ def get_list(items, default=None):
 
 
 # -------------------------------------------dict-------------------------------------------
-
 def pop_dict_keys(d, keys):
     """
     Pop the specified keys from the dict object
@@ -325,7 +323,6 @@ def get_dict_value_by_type(d: dict, key: str, value_type, default=None, use_isin
 
 
 # -------------------------------------------type-------------------------------------------
-
 def is_str(value, use_isinstance=False):
     """
     Check whether the value is string.
@@ -509,6 +506,5 @@ def parse_version(version):
 
 
 # -------------------------------------------private-------------------------------------------
-
 def _is_not_none(item, *args, **kwargs):
     return item is not None

@@ -19,7 +19,7 @@ def _generate_cache_expire_data(data, expire_minutes=0):
 
 def set_app_cache(key, data, expire_minutes=0):
     """
-    Set the current application data cache, such as menu items.
+    Cache data in the current flask application, ex)menu items.
 
     Example:
         set_app_cache('sys_module_name_mapping', module_name_mapping)
@@ -38,7 +38,7 @@ def set_app_cache(key, data, expire_minutes=0):
 
 def get_app_cache(key):
     """
-    Get the current application data cache by the key.
+    Get the specified cached data in the current flask application.
 
     Example:
         module_name_mapping = get_app_cache('sys_module_name_mapping')
@@ -61,7 +61,7 @@ def get_app_cache(key):
 
 def clear_app_cache():
     """
-    Clear all the current application data caches.
+    Clear all cached data in the current flask application.
 
     :return:
     """
@@ -73,7 +73,7 @@ def clear_app_cache():
 
 def set_g_cache(key, data):
     """
-    Set the data cache in g, such as db session.
+    Cache data in the flask g object, ex)db session.
 
     Example:
         set_g_cache('_flaskz_db_session', session)
@@ -91,7 +91,7 @@ def set_g_cache(key, data):
 
 def get_g_cache(key):
     """
-    Get the g data cache by the key.
+    Get the specified cached data in the flask g object.
 
     Example:
         session = get_g_cache('_flaskz_db_session')
@@ -108,7 +108,7 @@ def get_g_cache(key):
 
 def remove_g_cache(key):
     """
-    Remove the g data cache.
+    Remove the specified cached data in the flask g object.
 
     :param key:
     :return:

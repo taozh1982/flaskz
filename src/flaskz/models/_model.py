@@ -248,6 +248,9 @@ class ModelMixin(BaseModelMixin):
         Override the base query_pss method and return success flag.
         Used in router to return query data.
 
+        .. versionupdated::
+            - 1.7.0: add relationship-related search and sort
+
         Example:
             result, ins_list = TemplateModel.query_pss(parse_pss(   # use flaskz.models.parse_pss to parse pss payload
                 TemplateModel, {   # FROM templates
@@ -259,6 +262,9 @@ class ModelMixin(BaseModelMixin):
                         },
                         "email": "taozh@focus-ui.com",  # AND (email='taozh@focus-ui.com')
                         # "address.city": "New York",   # *relation
+                        # "address": {                  # *relation like
+                        #     "like": True
+                        # },
                         "_ors": {                       # AND (country='America' OR country='Canada')
                             "country": "America||Canada"
                         },

@@ -119,9 +119,3 @@ def run_at(at_time, function, args=None, kwargs=None, daemon=True, time_format='
         return
 
     return set_timeout(timeout_ms * 1000, function, args=args, kwargs=kwargs, daemon=daemon)
-
-
-if __name__ == '__main__':
-    set_timeout(1000, print, ['timeout'], daemon=False)
-    run_at('2023-06-28 15:51:00', print, ['timeout_at'], daemon=False)
-    # run_at(1629811200, print, ['timeout_at'], daemon=False)

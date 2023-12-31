@@ -120,6 +120,7 @@ def log_operation(*args, **kwargs):
 def gen_route_method(method, url_prefix, view_func_name=None):
     """
     Generate endpoint unique function name.
+
     :param method:
     :param url_prefix:
     :param view_func_name:

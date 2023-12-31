@@ -9,7 +9,7 @@ app_config = None
 
 def init_app_config(app):
     """
-    Initialize application configuration.
+    Initialize application(flask/celery/script/...) configuration.
     Once initialized, the application configuration can be get through get_app_config function anywhere.
 
     .. versionadded:: 1.5
@@ -31,9 +31,9 @@ def init_app_config(app):
 
 def get_app_config(key=None, default=None):
     """
-    Get the specified config value of the application.
-    If the config is initialized by init_app_config, return the initialized config, otherwise return the config of the current application.
-    If key is None return all config values(dict), otherwise return the specified config value
+    Get the specified config value of the application(flask/celery/script/...).
+    If the config is initialized by init_app_config, return the initialized config, otherwise return the config of the current flask application.
+    If key is None, return all config values(dict), otherwise return the specified config value
 
     .. versionupdated::
         1.5 -
@@ -64,6 +64,7 @@ def get_app_config(key=None, default=None):
 def get_app_config_items(app):
     """
     Return config items(dict)
+
     :param app:
     :return:
     """

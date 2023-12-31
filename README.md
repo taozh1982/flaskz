@@ -13,11 +13,10 @@
 
 ## 版本
 
-- **1.6.5rc1** `2023/12/12`
-    - [C] 将`SQLAlchemy`的依赖版本从`1.3.13(EOL)`升级到了`1.4.0(Maintenance)`
-    - [A] `flaskz.models.parse_pss`函数支持`relationship`查询和排序参数解析
-    - [A] `BaseModelMixin.query_pss`方法支持`relationship`查询和排序
-
+- **1.7.0** `2024/01/01`
+    - [C] `SQLAlchemy`依赖的版本从`>=1.3.13(EOL)`升级到`>=1.4.0(Maintenance)`
+    - [A] `BaseModelMixin.query_pss`方法支持`relationship`的查询和排序
+    - [A] `flaskz.models.parse_pss`函数支持`relationship`的查询和排序参数解析
 - **1.6.4** `2023/12/01`
     - [A] `BaseModelMixin`添加`refresh`方法, 用于更新当前模型对象
     - [A] 添加`flaskz.models.refresh_instance`函数, 用于更新模型对象/列表

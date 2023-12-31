@@ -131,7 +131,6 @@ from ._base import *
 from ._model import *
 from ._util import *
 from ._query_util import *
-
 from ..utils._cls import Attribute
 from ..utils._app import get_app_config_items
 from ..log import flaskz_logger

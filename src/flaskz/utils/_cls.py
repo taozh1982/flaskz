@@ -6,12 +6,14 @@ __all__ = ['Attribute', 'cls_to_dict', 'ins_to_dict']
 class Attribute:
     """
     Used to create attribute object
-    obj = AttrCls(**{'a':1,'b':2})
-    obj.c = 3
-    obj.a = 10
 
-    print(obj.x)
-    print(obj)
+    Example:
+        obj = AttrCls(**{'a':1,'b':2})
+        obj.c = 3
+        obj.a = 10
+
+        print(obj.x)
+        print(obj)
     """
 
     def __init__(self, **kwargs):
@@ -185,7 +187,7 @@ def _ins_to_dict(ins, option=None, path_items=None, path_keys=None):
 
 def _get_option_key(option, key_list, key):
     """
-    查找父option的cascade，直到找到根option
+    Return the specified value from the option, if not found, search from its parent option until it is found
     """
     if len(key_list) == 0:
         return option.get(key)

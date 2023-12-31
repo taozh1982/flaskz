@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Optional, Tuple, Union
 
 import paramiko
-from paramiko.ssh_exception import SSHException
+from paramiko.ssh_exception import SSHException, AuthenticationException
 
 
 @contextmanager
@@ -50,6 +50,7 @@ def ssh_run_command(connect_kwargs: dict, command: Union[str, list], run_kwargs:
             {'hostname': 'host', 'username': 'username', 'password': 'password',  # host
              'timeout': 10,  # connect timeout
              'secondary_password': 'enable_pwd',  # enable password
+             'recv_endswith': ['# ', '$ ', ': ', '? ', '#'],  # recv endswith
              'channel_kwargs': {'width': 1000, 'timeout': 2}},  # channel kwargs
             # command
             'show running-config',
@@ -91,17 +92,18 @@ def ssh_run_command_list(connect_kwargs: dict, command_list: list, run_kwargs: O
             {'hostname': 'host', 'username': 'username', 'password': 'password',  # host
              'timeout': 10,  # connect timeout
              'secondary_password': 'enable_pwd',  # enable password
+             'recv_endswith': ['# ', '$ ', ': ', '? ', '#'],  # recv endswith
              'channel_kwargs': {'width': 1000, 'timeout': 2}},  # channel kwargs
             # command
             ['enable', 'show version'],
             # run_kwargs
             {
-                'last_result': True,  # not clean output info
+                'last_result': True,  # only return last result
                 'prompt': False,  # disable prompt
             })
 
     :param connect_kwargs: the connect kwargs, ex) {'hostname': hostname, 'username': username, 'password': password, 'timeout': 10}
-    :param command_list: the command list, ex) ['show version', 'show running-config']
+    :param command_list: the command list, ex) ['terminal length 0', 'show version', 'show running-config']
     :param run_kwargs: the run command kwargs, ex) {'recv': False, 'prompt': False}
 
     :return: (success, result_or_err)
@@ -127,6 +129,8 @@ class SSH(object):
                   - add prompt param
                   - add prompt param and logic
                   - optimize _recv_data function
+            1.7.0 - add transport.is_authenticated() and channel.exit_status_ready() check
+                  - add recv_start_delay kwargs
 
         Example:
             ssh = SSH(host, username, password)
@@ -157,6 +161,7 @@ class SSH(object):
         self._secondary_password = kwargs.pop('secondary_password', None)  # for enable/sudo
         # recv_endswith = kwargs.pop('recv_endswith', None)  # for stop receiving
         self.recv_endswith = tuple(kwargs.pop('recv_endswith', None) or ['# ', '$ ', ': ', '? '])  # for stop receiving
+        self.recv_start_delay = kwargs.pop('recv_start_delay', 0.1)  # @2023-12-31 add, delay before receiving data start
         if 'timeout' in kwargs:
             self._timeout = kwargs.pop('timeout', 0)
         else:
@@ -168,6 +173,8 @@ class SSH(object):
         self.transport = paramiko.Transport(_create_socket(hostname=hostname, port=port, timeout=self._timeout))
         _connect_kwargs = kwargs.pop('connect_kwargs', None) or {}  # kwargs for Transport.connect()
         self.transport.connect(username=username, password=password, **_connect_kwargs)
+        if self.transport.is_authenticated() is not True:  # @2023-12-28 add(Oops, unhandled type 3 ('unimplemented'))
+            raise AuthenticationException('Authentication failed.')
 
         self._channel_kwargs = {'width': 100000, 'height': 100000}
         self._channel_kwargs.update(kwargs.pop('channel_kwargs', {}))
@@ -408,7 +415,10 @@ class SSH(object):
         recv_start = None
         count = 0
         recv_max_bytes = 1024
+        recv_start_delay = self.recv_start_delay
         while True:
+            if self.channel.exit_status_ready() is True:  # @2023-12-27 add for 'exit' command
+                break
             if not self.channel.recv_ready():
                 now = datetime.now()
                 if recv_start is None:
@@ -424,7 +434,7 @@ class SSH(object):
             else:
                 recv_start = None
                 if count == 0:  # Solve the problem of incomplete data
-                    time.sleep(0.1)
+                    time.sleep(recv_start_delay)
             count += 1
             data = self.channel.recv(recv_max_bytes)
             info = data.decode()
