@@ -161,6 +161,10 @@ def register_model_delete_route(app, model, rule, module=None, action='delete', 
     """
     Register a delete type URL rule for the specified model class to the application/blueprint.
 
+    .. versionupdated::
+        1.2   - add path converter of the did
+        1.3.1 - remove path converter of the did(Flask<2.2.3 path converter doesn't redirect to trailing slash)
+
     Examples:
         register_model_delete_route(api_blueprint, User, 'users', 'users')
 

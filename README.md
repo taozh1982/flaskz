@@ -13,6 +13,8 @@
 
 ## 版本
 
+- **1.7.1** `2024/01/05`
+    - [F] 修复SQLAlchemy<2.0.0版本时, `flaskz.models._util.py`中`BinaryExpression`类的导入问题
 - **1.7.0** `2024/01/01`
     - [C] `SQLAlchemy`依赖的版本从`>=1.3.13(EOL)`升级到`>=1.4.0(Maintenance)`
     - [A] `BaseModelMixin.query_pss`方法支持`relationship`的查询和排序

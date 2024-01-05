@@ -1,7 +1,8 @@
 from contextlib import contextmanager
 
 from flask import g
-from sqlalchemy import text, or_, and_, inspect, BinaryExpression
+from sqlalchemy import text, or_, and_, inspect
+from sqlalchemy.sql.elements import BinaryExpression  # @2024-01-04 update, BinaryExpression not in sqlalchemy.__init__.py when sqlalchemy<2.0.0
 
 from . import DBSession
 from ._base import BaseModelMixin
@@ -12,8 +13,7 @@ __all__ = ['create_instance', 'create_relationships',
            'append_debug_queries', 'get_debug_queries', 'append_query_filter',
            'get_db_session', 'db_session', 'close_db_session',
            'model_to_dict', 'refresh_instance',
-           'is_model_mixin_instance'
-           ]
+           'is_model_mixin_instance']
 
 
 def create_instance(model_cls, data, create_relationship=True):
