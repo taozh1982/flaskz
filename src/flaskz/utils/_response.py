@@ -9,6 +9,14 @@ def create_response(success, data, data_wrapped=False):
     """
     Create the response json result.
 
+    Example:
+        @api_bp.route('/users/add/', methods=['POST'])
+        def add():
+            request_json = request.json
+            success, data = User.add(request_json)
+            res_data = model_to_dict(data)
+            return create_response(success, res_data) # return response result
+
     :param success:
     :param data:
     :param data_wrapped:
@@ -62,7 +70,7 @@ def _create_fail_response(status_code, msg=None):
 def get_status_msg(status_code):
     """
     Get the specified message by status_code.
-    Can be used to return internationalized text, Local can be fixed, or get the local from request.
+    Can be used to return internationalized text, Locale can be fixed, or get the locale from request.
 
     :param status_code:
     :return:

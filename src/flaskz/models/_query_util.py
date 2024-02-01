@@ -14,6 +14,7 @@ def parse_pss(cls, pss_payload=None):
     .. versionupdated::
         - 1.6.1: change return list item(avoid SQL injection): SQL text --> Column.operator(parameter)  ex) "name like '%admin%'" --> TemplateModel.name.like('%admin%')
         - 1.7.0: add relationship-related search and sort parameter parsing
+        - 1.7.2: add like_columns parameter parsing
 
     Example:
         result, result = TemplateModel.query_pss(parse_pss(   # use flaskz.models.parse_pss to parse pss payload
@@ -29,7 +30,8 @@ def parse_pss(cls, pss_payload=None):
                     },
                     # "address.city": "New York",   # *relation
                     # "address": {                  # *relation like
-                    #     "like": True
+                    #     "like": True,
+                    #     "like_columns": ["city"]  # like columns of the relation
                     # },
                     "email": "taozh@focus-ui.com",  # AND (email='taozh@focus-ui.com')
                     "_ors": {                       # AND (country='America' OR country='Canada')
@@ -115,7 +117,7 @@ def _parse_search_filters(cls, search, parse_option):
     # search = search or {}
     # @2023-12-05 add _like & _ilike
 
-    like_filters, ilike_filters, notlike_filters, notilike_filters = _parse_search_like_filters(cls, *_get_search_like_values(cls, search))
+    like_filters, ilike_filters, notlike_filters, notilike_filters = _parse_search_like_filters(cls, search, *_get_search_like_values(cls, search))
     ands = []
     ors = []
 
@@ -310,13 +312,16 @@ def _get_parse_option_keywords(keyword):
 
 
 # -------------------------------------------search/like-------------------------------------------
-def _parse_search_like_filters(cls, search_like, search_ilike, search_notlike, search_notilike):
+def _parse_search_like_filters(cls, search, search_like, search_ilike, search_notlike, search_notilike):
     """
     Get like list by like_columns.
     """
 
     like_columns = []
-    for col in getattr(cls, 'like_columns', []):
+    cls_like_columns_field, cls_like_columns = _get_first_non_column_field_value(cls, search, _get_parse_option_keywords('like_columns'))  # @2024-01-17 add
+    if type(cls_like_columns) is not list:
+        cls_like_columns = getattr(cls, 'like_columns', [])
+    for col in cls_like_columns:
         if is_str(col):
             col = cls.get_column_by_field(col)
         if col is not None:

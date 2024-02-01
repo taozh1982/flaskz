@@ -2,9 +2,9 @@ import inspect
 import textwrap
 from urllib import parse as urllib_parse
 
-import requests
 from flask import request
-from requests import Session
+from requests import Session, sessions
+from requests.adapters import HTTPAdapter
 
 from ._common import is_dict
 from .. import res_status_codes
@@ -12,29 +12,37 @@ from ..log import flaskz_logger
 
 __all__ = ['api_request', 'forward_request', 'append_url_search_params']
 
-requests_kwargs = None
-
-
-def _get_request_kwargs(kwargs):
-    global requests_kwargs
-    if requests_kwargs is None:
-        requests_kwargs = []
-        for key in inspect.signature(Session.request).parameters:
-            requests_kwargs.append(key)
-
-    req_kwargs = {}
-    for key, value in kwargs.items():
-        if key in requests_kwargs:
-            req_kwargs[key] = value
-    return req_kwargs
+_session_request_kwargs = None
 
 
 def api_request(url, method="GET", url_params=None, base_url="", raw_response=False, **kwargs):
     """
     Request an api.
 
+   .. versionupdated::
+        1.7.2 - add `http_kwargs` param to set http request parameters(HTTPAdapter)
+
     Example
-        api_request('ELASTICSEARCH_URI', url_params={'index': index}, json=query, timeout=10)
+        # post request
+        api_request('req_url', 'POST', json=payload)
+        api_request({'url': 'req_url', 'method': 'POST'}, json=payload)
+
+        # get request
+        api_request('req_url', headers={'Authorization': 'eyJhbGciOiJIUzUxMiIs......'})
+
+        # base url
+        api_request('req_url', base_url='base_url') # url --> 'base_url/req_url'
+
+        # url_variables
+        api_request('req_url/{id}/', url_variables={'id': 1}) # url --> 'req_url/1/'
+
+        # url_search_params
+        api_request('req_url', url_search_params={'id': 1}) # url --> 'req_url?id=1'
+
+        # http_kwargs
+        api_request('req_url', http_kwargs={ # --> HTTPAdapter parameters
+            'pool_connections': 10, 'pool_maxsize': 100, 'max_retries': 10
+        })
 
     :param url:
     :param method:
@@ -77,9 +85,8 @@ def api_request(url, method="GET", url_params=None, base_url="", raw_response=Fa
         'data': kwargs.get('data'),
         'json': kwargs.get('json')
     }))
-
     try:
-        res = requests.request(method=_method, url=_url, **_get_request_kwargs(kwargs))
+        res = _request(method=_method, url=_url, **kwargs)  # @2024-01-16 change, requests.request-->_request
         status_code = res.status_code
         result = res.text
         flaskz_logger.debug('Api request completed:\n   status_code={status_code}\n   result={result}'.format(**{
@@ -87,12 +94,14 @@ def api_request(url, method="GET", url_params=None, base_url="", raw_response=Fa
             # 'result': slice_str(result, 60, 10, '\n......\n'),
             'result': textwrap.shorten(result, 1000)  # @2022-05-26:将日志输出由slice_str改为了shorten
         }))
+        if kwargs.get('close') is not False:  # @2024-01-09 add
+            res.close()
         if raw_response is True:
             return res
         return result
     except Exception as e:
         result = str(e)
-        flaskz_logger.exception('Api request failed:\n' + str(e))
+        flaskz_logger.exception('Api request failed:\n' + result)
 
     return res_status_codes.api_request_err, result
 
@@ -191,3 +200,29 @@ def append_url_search_params(url, params):  # @2022-05-09: add
             query_string += k_str
 
     return url_parts._replace(query=query_string).geturl()
+
+
+def _request(method, url, **kwargs):
+    # requests.request
+    # @2024-01-26 add
+    with sessions.Session() as session:
+        http_kwargs = kwargs.get('http_kwargs', None)
+        if http_kwargs:
+            adapter = HTTPAdapter(**http_kwargs)
+            session.mount('http://', adapter)
+            session.mount('https://', adapter)
+        return session.request(method=method, url=url, **_get_session_request_kwargs(kwargs))
+
+
+def _get_session_request_kwargs(kwargs):
+    global _session_request_kwargs
+    if _session_request_kwargs is None:
+        _session_request_kwargs = []
+        for key in inspect.signature(Session.request).parameters:
+            _session_request_kwargs.append(key)
+
+    req_kwargs = {}
+    for key, value in kwargs.items():
+        if key in _session_request_kwargs:
+            req_kwargs[key] = value
+    return req_kwargs

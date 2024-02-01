@@ -13,6 +13,9 @@
 
 ## 版本
 
+- **1.7.2** `2024/02/01`
+    - [A] `flaskz.models.parse_pss`函数支持`like_columns`参数, 用于定义模糊查询列(默认使用模型类的like_columns)
+    - [A] `flaskz.utils.api_request`函数添加`http_kwargs`参数，用于设置http请求参数
 - **1.7.1** `2024/01/05`
     - [F] 修复SQLAlchemy<2.0.0版本时, `flaskz.models._util.py`中`BinaryExpression`类的导入问题
 - **1.7.0** `2024/01/01`
@@ -25,8 +28,8 @@
     - [A] `model_to_dict`函数的`option`参数添加`filter`选项, 用于过滤模型对象列表
     - [A] `flaskz.rest.register_model_query_pss_route`路由生成函数添加`get_pss_config`参数, 用于自定义pss查询参数
     - [A] `flaskz.ext.ssh`添加`ssh_run_command`和`ssh_run_command_list`函数
-    - [A] `flaskz.ext.ssh`添加`connect_kwargs`和`channel_kwargs`参数以自定义connect和channel参数
-    - [A] `flaskz.ext.ssh`添加`timeout=10`参数默认值
+    - [A] `flaskz.ext.ssh.SSH`添加`connect_kwargs`和`channel_kwargs`参数以自定义connect和channel参数
+    - [A] `flaskz.ext.ssh.SSH`设置`timeout`参数的默认值为`10`
 - **1.6.3** `2023/09/01`
     - [A] 添加`FLASKZ_DATABASE_SESSION_KWARGS`参数, 用于自定义`DBSession`参数
     - [C] `BaseModelMixin.add_db`和`BaseModelMixin.update_db`方法添加`refresh`操作, 以返回跟数据库同步的instance对象
@@ -41,7 +44,7 @@
     - [A] `BaseModelMixin`添加`clear_db`方法, 用于清空数据
     - [A] `BaseModelMixin.query_pss`方法支持`GROUP BY`分组
     - [A] `flaskz.ext.ssh`添加对Paramiko>=3.0.0版本的支持
-    - [A] `flaskz.ext.ssh`添加`secondary_password`和`recv_endswith`参数
+    - [A] `flaskz.ext.ssh.SSH`添加`secondary_password`和`recv_endswith`参数
 - **1.5.3** `2023/06/01`
     - [F] `flaskz.utils.api_request`函数的`url_params`参数仅用于url中的`{变量}`替换而不添加查询字符串
     - [A] `flaskz.utils.api_request`函数添加`url_search_params`参数用于添加url查询字符串
@@ -49,7 +52,7 @@
     - [C] `db_session`上下文管理器自动关闭非缓存session
     - [F] 修复`BaseModelMixin.get_query_default_order`默认排序在`query_pss`方法中不起作用的问题
 - **1.5** `2023/05/01`
-    - [A] 扩展`flaskz.rest`路由生成模块*
+    - [A] 扩展`flaskz.rest`路由生成模块
         - 添加`register_model_route`函数, 可用于生成指定数据模型的CRUD等路由
         - 添加`register_model_add_route`函数, 可用于生成指定数据模型的添加路由
         - 添加`register_model_delete_route`函数, 可用于生成指定数据模型的删除路由
@@ -58,7 +61,7 @@
         - 添加`register_model_query_route`函数, 可用于生成指定数据模型的全量查询路由
         - 添加`register_model_query_pss_route`函数, 可用于生成指定数据模型的条件查询(分页+搜索+排序)路由
         - 添加`register_models_query_route`函数, 可用于生成多个数据模型的全量查询路由
-    - [A] `ModelMixin.query_pss`方法支持多列排序*
+    - [A] `ModelMixin.query_pss`方法支持多列排序
     - [A] `flaskz.models.init_model`和`flaskz.log.init_log`函数添加对`Class`类型参数的支持
     - [A] `BaseModelMixin.delete_db`方法添加对`dict`类型参数的支持
     - [A] `flaskz.utils`添加`cls_to_dict`函数, 用于生成类属性的dict对象
@@ -78,7 +81,7 @@
     - [F] 修复`BaseModelMixin`的`update_db`和`delete_db`方法在非Flask应用或没有Flask应用上下文时的操作失败问题
 - **1.0** `2022/12/01`
     - [A] 添加`flaskz.utils.set_timeout`和`flaskz.utils.set_interval`函数用于延迟和周期性函数执行
-    - [A] `flaskz.ext.ssh`添加`timeout`参数以设置超时时间(登录&命令执行)
+    - [A] `flaskz.ext.ssh.SSH`添加`timeout`参数以设置超时时间(登录&命令执行)
     - [F] 修复`BaseModelMixin.bulk_delete`方法因某条数据删除失败导致的操作中断和部分删除问题
 - **0.9** `2022/10/01`
     - [A] 添加`flaskz.auth`包, 提供了JWS授权功能

@@ -263,7 +263,8 @@ class ModelMixin(BaseModelMixin):
                         "email": "taozh@focus-ui.com",  # AND (email='taozh@focus-ui.com')
                         # "address.city": "New York",   # *relation
                         # "address": {                  # *relation like
-                        #     "like": True
+                        #     "like": True,
+                        #     "like_columns": ["city"]  # like columns of the relation
                         # },
                         "_ors": {                       # AND (country='America' OR country='Canada')
                             "country": "America||Canada"
