@@ -169,6 +169,15 @@ class SSH(object):
 
         if hostname is None and 'host' in kwargs:
             hostname = kwargs.pop('host', None)
+
+        self._pre_commands = None  # @2024-04-14 add
+        pre_commands = kwargs.pop('pre_commands', None)
+        if type(pre_commands) is str:
+            pre_commands = [pre_commands]
+        if type(pre_commands) is list and len(pre_commands) > 0:
+            self._pre_commands = pre_commands
+            self._pre_commands_run = False
+
         # self.transport = paramiko.Transport((hostname, port))
         self.transport = paramiko.Transport(_create_socket(hostname=hostname, port=port, timeout=self._timeout))
         _connect_kwargs = kwargs.pop('connect_kwargs', None) or {}  # kwargs for Transport.connect()
@@ -220,11 +229,18 @@ class SSH(object):
 
          :return: the output of the command
         """
-        command, recv, clean = _get_command_arg(command, recv, clean)
+
+        if self._pre_commands_run is False and self._pre_commands:
+            self._run_command('', False)
+            pre_command_len = len(self._pre_commands)
+            for index, pre_command in enumerate(self._pre_commands):
+                self._run_command(pre_command, index == pre_command_len - 1)
+            self._pre_commands_run = True
 
         if prompt is None:  # prompt is False for config
             prompt = self.get_prompt()  # 1.get prompt 2.remove welcome
 
+        command, recv, clean = _get_command_arg(command, recv, clean)
         output = self._run_command(command, recv, prompt)
         if output is None:
             return None
@@ -249,8 +265,6 @@ class SSH(object):
 
         return output
 
-        # --------------------------------------------------------------
-
     def run_command_list(self, command_list: list, last_result: bool = False, **kwargs) -> Union[list, str]:
         """
         Run a command list.
@@ -273,7 +287,7 @@ class SSH(object):
          :return: command output result(list/last)
         """
         re_list = []
-        prompt = kwargs.get('kwargs', None)
+        prompt = kwargs.get('prompt', None)  # @2024-03-26 kwargs.get('kwargs', None) --> kwargs.get('prompt', None)
         if prompt is None:
             kwargs['prompt'] = self.get_prompt()  # for reuse
         count = len(command_list)
@@ -437,7 +451,7 @@ class SSH(object):
                     time.sleep(recv_start_delay)
             count += 1
             data = self.channel.recv(recv_max_bytes)
-            info = data.decode()
+            info = data.decode('utf-8', 'backslashreplace')  # @2024-04-18 data.decode() --> current
             res = info.replace(' \r', '')
             res_list.append(res)
             if len(info) < recv_max_bytes:  # read speed > write speed
@@ -512,7 +526,7 @@ def _clean_output(output, command, prompt):
     """
     # remove the start command  ex) ls -l
     if output.startswith(command):
-        output = output[len(command):].lstrip()
+        output = output[len(command):].lstrip('\r\n')  # 2024-04-05 add '\r\n' to keep space
 
     prompt_matched = False
     if type(prompt) is str:  # for show
@@ -543,7 +557,7 @@ def _clean_output(output, command, prompt):
             output = output[:path_match_start] + '' + output[path_match_end:]
         output = output.replace(command + '\r\n', '')
 
-    return output.strip()
+    return output.strip('\r\n')  # 2024-04-05 add '\r\n' to keep space
 
 
 def _remove_end_slash(path):

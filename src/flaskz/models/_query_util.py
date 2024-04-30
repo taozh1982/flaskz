@@ -266,6 +266,7 @@ def get_col_op(column, operator, value):
 
         '==': lambda col, val: col.__eq__(val)
     }
+    value = _get_operator_value(operator, value)  # 2024-04-07 add
     if operator in op_func_mapping:
         return op_func_mapping.get(operator)(column, value)
     return column.op(operator)(value)
@@ -351,11 +352,12 @@ def _gen_like_columns_filters(like_columns, like_op, like_value):
     if like_value is None or type(like_value) is not str or like_value == '':
         return []
 
-    if not (like_value.startswith('%') or like_value.startswith('%')):
-        like_value = "%" + like_value + "%"
-
+    # if not (like_value.startswith('%') or like_value.startswith('%')):
+    #     like_value = "%" + like_value + "%"
+    like_value = _get_operator_value(like_op, like_value)
     filters = []
     for col in like_columns:
+        # filters.append(get_col_op(col, like_op, like_value))
         filters.append(get_col_op(col, like_op, like_value))
     return filters
 
@@ -378,6 +380,13 @@ def _merge_search_filter_likes(pss_options, parse_option):
         else:
             filters.append(and_(*filter_notlikes))
     pss_options['filter_likes'] = filters
+
+
+def _get_operator_value(operator, value):
+    if operator in ('like', 'ilike', 'notlike', 'notilike'):
+        if not (value.startswith('%') or value.endswith('%')):
+            return "%" + value + "%"
+    return value
 
 
 # -------------------------------------------sort+group-------------------------------------------

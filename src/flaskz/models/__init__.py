@@ -49,7 +49,9 @@ def init_model(app):
                 engine_kwargs[engine_key] = app_config.get(config_key)
 
         engine = create_engine(database_uri, **engine_kwargs)
-        session_kwargs = app_config.get('FLASKZ_DATABASE_SESSION_KWARGS') or {}  # @2023-08-25: add FLASKZ_DATABASE_SESSION_KWARGS config
+        session_kwargs = app_config.get('FLASKZ_DATABASE_SESSION_KWARGS') or {}  # @2023-08-25: add `FLASKZ_DATABASE_SESSION_KWARGS` config
+        if session_kwargs.pop('reusable_in_flask_g', None) is False:  # @2024-02-02: add `reusable_in_flask_g` to disable cache
+            setattr(DBSession, 'reusable_in_flask_g', False)
         DBSession.configure(binds={ModelBase: engine}, **session_kwargs)  # for multiple db
 
         with engine.connect():  # connect test

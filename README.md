@@ -1,6 +1,6 @@
 ## 关于
 
-*Flaskz*是*Flask*和*SQLAlchemy ORM*的扩展, 主要用于web应用的开发, 可以快速灵活的实现各种业务场景并提供API。
+*Flaskz*是*Flask*和*SQLAlchemy ORM*的扩展工具集, 主要用于web应用的开发, 可以快速灵活的实现各种业务场景并提供API。
 
 ## 使用
 
@@ -13,6 +13,12 @@
 
 ## 版本
 
+- **1.7.3** `2024/05/01`
+    - [C] `flaskz.utils.ins_to_dict`函数返回的dict中包含值为`None`的键值
+    - [A] `BaseModelMixin.to_dict`方法的`option`参数添加`relationships`选项，用于自定义是否查询关联关系
+    - [A] `FLASKZ_DATABASE_SESSION_KWARGS`配置参数添加`reusable_in_flask_g`选项, 用于设置是否在`flask.g`中缓存&复用`session`对象(默认复用)
+    - [C] `flaskz.ext.ssh`返回值保留文本两侧的空格
+    - [A] `flaskz.ext.ssh.SSH`添加`pre_commands`参数, 用于在命令执行之前预先执行控制相关命令
 - **1.7.2** `2024/02/01`
     - [A] `flaskz.models.parse_pss`函数支持`like_columns`参数, 用于定义模糊查询列(默认使用模型类的like_columns)
     - [A] `flaskz.utils.api_request`函数添加`http_kwargs`参数，用于设置http请求参数
@@ -31,7 +37,7 @@
     - [A] `flaskz.ext.ssh.SSH`添加`connect_kwargs`和`channel_kwargs`参数以自定义connect和channel参数
     - [A] `flaskz.ext.ssh.SSH`设置`timeout`参数的默认值为`10`
 - **1.6.3** `2023/09/01`
-    - [A] 添加`FLASKZ_DATABASE_SESSION_KWARGS`参数, 用于自定义`DBSession`参数
+    - [A] 添加`FLASKZ_DATABASE_SESSION_KWARGS`配置参数, 用于自定义`DBSession`参数
     - [C] `BaseModelMixin.add_db`和`BaseModelMixin.update_db`方法添加`refresh`操作, 以返回跟数据库同步的instance对象
     - [A] `flaskz.rest.register_model_*`路由生成函数添加路由`endpoint`参数
 - **1.6.2** `2023/07/06`

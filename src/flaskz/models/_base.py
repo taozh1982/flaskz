@@ -226,9 +226,16 @@ class BaseModelMixin:
         return ins_to_dict(self, opt)
 
     @classmethod
-    def get_to_dict_attrs(cls, ins, cascade, *args):
+    def get_to_dict_attrs(cls, ins, cascade=0, relationships=None, *args, **kwargs):
         """to_dict attr """
         fields = [cls.get_column_field(col) for col in cls.get_columns()]
+
+        # @2024-04-14 add
+        if relationships:
+            for relationship in cls.get_relationships():
+                if relationship.key in relationships:
+                    fields.append(relationship.key)
+
         if cascade > 0:
             for relationship in cls.get_relationships():
                 lazy = relationship.lazy
@@ -865,8 +872,6 @@ class BaseModelMixin:
             field = cls.get_column_field(col)
             attrs.append(field + '=' + str(getattr(self, field, None)))
         return cls.get_class_name() + '(' + (', '.join(attrs)) + ')'
-
-    # -------------------------------------------new-------------------------------------------
 
 
 # must

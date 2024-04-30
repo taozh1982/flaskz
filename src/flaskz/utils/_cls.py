@@ -135,14 +135,18 @@ def _ins_to_dict(ins, option=None, path_items=None, path_keys=None):
         if type(item_cascade) == int:
             item_cascade -= len(path_keys)
 
-    if type(item_cascade) != int:
+    if type(item_cascade) is not int:
         item_cascade = 0
+
+    item_relationships = item_option.get('relationships', None)  # @2024-04-14 add
+    if type(item_relationships) is not list:
+        item_relationships = []
 
     item_recursion_value = _get_option_key(option, path_keys, 'recursion_value')
 
     item_getattrs = _get_option_key(option, path_keys, 'getattrs')
     if item_getattrs:
-        attrs = item_getattrs(ins, item_cascade, option, path_keys)
+        attrs = item_getattrs(ins, item_cascade, item_relationships, option, path_keys)
     else:
         attrs = ins.__dict__
 
@@ -178,8 +182,8 @@ def _ins_to_dict(ins, option=None, path_items=None, path_keys=None):
         else:
             _value = value
 
-        if _value is not None:
-            result[key] = _value
+        # if _value is not None:  # @2024-03-06 remove
+        result[key] = _value
         # elif with_none_value:
         #     result[key] = None
     return result

@@ -110,7 +110,7 @@ def query_multiple_model(*cls_list):
 
 
 def append_debug_queries(query):
-    if _has_g_context():  # @2022-07-26 add,
+    if _has_flask_g_context():  # @2022-07-26 add,
         debug_queries = getattr(g, 'z_debug_queries', None)
         if debug_queries is None:
             g.z_debug_queries = debug_queries = []
@@ -118,7 +118,7 @@ def append_debug_queries(query):
 
 
 def get_debug_queries():
-    if _has_g_context():  # @2022-07-26 add,
+    if _has_flask_g_context():  # @2022-07-26 add,
         return getattr(g, 'z_debug_queries', [])
     return []
 
@@ -189,7 +189,9 @@ def get_db_session():
 
     :return:
     """
-    if _has_g_context():  # @2022-07-26 add, make sure work without flask request
+    # @2022-07-26 add `_has_g_context` condition to make sure work without flask request,
+    # @2024-02-02 add `reusable_in_flask_g` condition to disable cache
+    if getattr(DBSession, 'reusable_in_flask_g', None) is not False and _has_flask_g_context():
         session = get_g_cache('_flaskz_db_session')
         if session is None:
             session = DBSession()
@@ -206,7 +208,7 @@ def close_db_session():
 
     :return:
     """
-    if _has_g_context():  # @2022-07-26 add
+    if _has_flask_g_context():  # @2022-07-26 add
         session = get_g_cache('_flaskz_db_session')
         if session is not None:
             remove_g_cache('_flaskz_db_session')
@@ -349,7 +351,7 @@ def is_model_mixin_instance(obj):
     return isinstance(obj, BaseModelMixin)
 
 
-def _has_g_context():
+def _has_flask_g_context():
     # if has_request_context():  # If there is request context, g must exist
     #     return True
     if not g:  # @2022-11-28: change, (not g) != (g is None)
