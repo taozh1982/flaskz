@@ -6,10 +6,10 @@ from sqlalchemy.sql.elements import BinaryExpression  # @2024-01-04 update, Bina
 
 from . import DBSession
 from ._base import BaseModelMixin
-from ..utils import get_g_cache, set_g_cache, remove_g_cache
+from ..utils import get_g_cache, set_g_cache, remove_g_cache, get_dict_mapping, get_ins_mapping
 
 __all__ = ['create_instance', 'create_relationships',
-           'query_all_models', 'query_multiple_model',
+           'query_all_models', 'query_multiple_model', 'query_from_g_cache',
            'append_debug_queries', 'get_debug_queries', 'append_query_filter',
            'get_db_session', 'db_session', 'close_db_session',
            'model_to_dict', 'refresh_instance',
@@ -107,6 +107,57 @@ def query_multiple_model(*cls_list):
     """
 
     return query_all_models(*cls_list)
+
+
+def query_from_g_cache(model_class, by_value, attr=None, to_dict=True, mapping_key=None, cache_key=None):
+    """
+    Query data from g(flask), if data not exist, query first and cache.
+
+    .. versionadded:: 1.8.0
+
+    Example:
+        query_from_g_cache(User, 1)  # return 'dict' of User properties with id=1
+        query_from_g_cache(User, 1, 'username')  # return 'username' property of User with id=1
+        query_from_g_cache(User, 'admin', mapping_key='username')  # use 'username' as key of the cached dict
+        query_from_g_cache(User, 1, to_dict=False)  # id=1(ins) # cache 'instance'
+        query_from_g_cache(User, False)  # return 'all' users
+
+    :param model_class: the model class to query and cache, ex)User
+    :param by_value: the value to query, if False return all items ex) 1/'admin'
+    :param attr: the attribute of the data to return, ex)'username'/'email'
+    :param to_dict: cache data as dict or not, ex) True/False
+    :param mapping_key: the key used to create data mapping, if None, use the primary filed of the model_class, ex)'id'
+    :param cache_key: the key used to cache data, if None use 'flaskz_' + class_name + '_model_cached_items'
+    :return:
+    """
+    if by_value is None:
+        return None
+    class_name = model_class.get_class_name()
+    if cache_key is None:
+        cache_key = 'flaskz_' + class_name + '_model_cached_items'
+    mapping = get_g_cache(cache_key)
+
+    if mapping is None:
+        if mapping_key is None:  # if key is None, use primary_field of the model_class
+            mapping_key = model_class.get_primary_field()
+        success, data = model_class.query_all()
+        if success:
+            if to_dict is True or type(to_dict) is dict:
+                _to_dict_option = to_dict if type(to_dict) is dict else None
+                mapping = get_dict_mapping(model_to_dict(data, _to_dict_option), mapping_key)
+            else:
+                mapping = get_ins_mapping(data, mapping_key)
+            set_g_cache(cache_key, mapping)
+    if mapping:
+        if by_value is False:  # if pk_value is False, return all items
+            return list(mapping.values())
+        item = mapping.get(by_value)
+        if item and attr is not None:
+            if to_dict is True:
+                return item.get(attr)
+            else:
+                return getattr(item, attr, None)
+        return item
 
 
 def append_debug_queries(query):

@@ -540,7 +540,6 @@ class BaseModelMixin:
             return session.query(cls).delete()
 
     # -------------------------------------------query-------------------------------------------
-
     @classmethod
     def query(cls):
         """
@@ -611,6 +610,8 @@ class BaseModelMixin:
         :param pk_value:
         :return:
         """
+        if pk_value is None:  # @2024-05-14 add
+            return None
         with db_session(do_commit=False) as session:
             # instance = session.query(cls).get(pk_value)
             instance = _session_get(session, cls, pk_value)

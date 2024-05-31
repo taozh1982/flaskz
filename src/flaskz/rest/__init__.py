@@ -116,6 +116,39 @@ def register_model_route(app, model, rule, module=None, types=None, multi_models
         register_model_query_pss_route(app, model, rule, module, to_json_option=to_json_option, strict_slash=strict_slash, get_pss_config=get_pss_config)
     if multi_models and ('multi' in types or 'multiple' in types):
         register_models_query_route(app, multi_models, rule, module)
+    if 'bulk_add' in types:
+        register_model_bulk_add_route(app, model, rule, module, strict_slash=strict_slash)
+    if 'bulk_delete' in types:
+        register_model_bulk_delete_route(app, model, rule, module, strict_slash=strict_slash)
+    if 'bulk_update' in types:
+        register_model_bulk_update_route(app, model, rule, module, strict_slash=strict_slash)
+    return app
+
+
+def register_model_bulk_route(app, model, rule, module=None, types=None, strict_slash=True):
+    """
+    Register url rules for bulk operations of the specified model class to the application/blueprint.
+
+    .. versionadded:: 1.8 @2024-05-03
+
+    Example:
+        register_model_bulk_route(api_bp, User, 'users', 'users')
+
+    :param app: Flask application / Blueprint instance
+    :param model: The DB model class, ex)User
+    :param rule: The URL rule string, ex)/users
+    :param module: The module name for permission check, ex)users
+    :param types: The types of the route, default is ['bulk_add', 'bulk_delete', 'bulk_update']
+    :param strict_slash: If not false, the rule url will end with slash
+    :return:
+    """
+    types = get_list(types, ['bulk_add', 'bulk_delete', 'bulk_update'])
+    if 'bulk_add' in types:
+        register_model_bulk_add_route(app, model, rule, module, strict_slash=strict_slash)
+    if 'bulk_delete' in types:
+        register_model_bulk_delete_route(app, model, rule, module, strict_slash=strict_slash)
+    if 'bulk_update' in types:
+        register_model_bulk_update_route(app, model, rule, module, strict_slash=strict_slash)
     return app
 
 
@@ -138,11 +171,11 @@ def register_model_add_route(app, model, rule, module=None, action='add', method
     :return:
     """
     methods = methods or ['POST']
-    rule, did_rule = _get_route_rule(rule, strict_slash)
+    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash)
 
-    @app.route(rule, methods=methods, endpoint=endpoint)
+    @app.route(base_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
-    @gen_route_method('add', rule)
+    @gen_route_method('add', base_rule)
     def add():
         request_json = request.json
         req_log_data = json.dumps(request_json)
@@ -180,11 +213,11 @@ def register_model_delete_route(app, model, rule, module=None, action='delete', 
     :return:
     """
     methods = methods or ['DELETE']
-    rule, did_rule = _get_route_rule(rule, strict_slash)
+    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, did_suffix='<did>')
 
     @app.route(did_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
-    @gen_route_method('delete', rule)
+    @gen_route_method('delete', base_rule)
     def delete(did):
         success, data = model.delete(did)
         res_data = model_to_dict(data, to_json_option)
@@ -216,12 +249,12 @@ def register_model_update_route(app, model, rule, module=None, action='update', 
     :return:
     """
     methods = methods or ['PATCH']
-    rule, did_rule = _get_route_rule(rule, strict_slash)
+    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, did_suffix='<did>')
 
-    @app.route(rule, methods=methods, endpoint=endpoint)
+    @app.route(base_rule, methods=methods, endpoint=endpoint)
     @app.route(did_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
-    @gen_route_method('update', rule)
+    @gen_route_method('update', base_rule)
     def update(did=None):
         request_json = request.json
         if did is not None:
@@ -258,11 +291,11 @@ def register_model_upsert_route(app, model, rule, module=None, action='upsert', 
     :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     """
     methods = methods or ['POST']
-    rule, upsert_rule = _get_route_rule(rule, strict_slash, rule_suffix)
+    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, rule_suffix=rule_suffix)
 
-    @app.route(upsert_rule, methods=methods, endpoint=endpoint)
+    @app.route(suffix_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
-    @gen_route_method('upsert', rule)
+    @gen_route_method('upsert', base_rule)
     def upsert():
         request_json = request.json
         req_log_data = json.dumps(request_json)
@@ -301,12 +334,12 @@ def register_model_query_route(app, model, rule, module=None, action=None, metho
     :return:
     """
     methods = methods or ['GET']
-    rule, did_rule = _get_route_rule(rule, strict_slash)
+    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, did_suffix='<did>')
 
-    @app.route(rule, methods=methods, endpoint=endpoint)
+    @app.route(base_rule, methods=methods, endpoint=endpoint)
     @app.route(did_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
-    @gen_route_method('query', rule)
+    @gen_route_method('query', base_rule)
     def query(did=None):
         if did is None:
             success, data = model.query_all()
@@ -352,11 +385,11 @@ def register_model_query_pss_route(app, model, rule, module=None, action=None, m
     :return:
     """
     methods = methods or ['GET', 'POST']
-    rule, pss_rule = _get_route_rule(rule, strict_slash, rule_suffix)
+    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, rule_suffix=rule_suffix)
 
-    @app.route(pss_rule, methods=methods, endpoint=endpoint)
+    @app.route(suffix_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
-    @gen_route_method('query_pss', rule)
+    @gen_route_method('query_pss', base_rule)
     def query_pss():
         request_json = get_request_json({})  # @2023-06-15, request.json --> get_request_json({})
         req_log_data = json.dumps(request_json)
@@ -404,11 +437,11 @@ def register_models_query_route(app, models, rule, module=None, action=None, met
     :return:
     """
     methods = methods or ['GET']
-    rule, multi_rule = _get_route_rule(rule, strict_slash, rule_suffix)
+    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, rule_suffix=rule_suffix)
 
-    @app.route(multi_rule, methods=methods, endpoint=endpoint)
+    @app.route(suffix_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
-    @gen_route_method('query_multi', rule)
+    @gen_route_method('query_multi', base_rule)
     def query_multi():
         model_cls_list = []
         multi_list = []
@@ -443,20 +476,161 @@ def register_models_query_route(app, models, rule, module=None, action=None, met
         return create_response(success, res_data)
 
 
-def _get_route_rule(rule, strict_slash=True, suffix='<did>'):
+def register_model_bulk_add_route(app, model, rule, module=None, action='add', methods=None, strict_slash=True, rule_suffix='bulk', endpoint=None):
+    """
+    Register bulk add type URL rule for the specified model class to the application/blueprint.
+
+    .. versionadded:: 1.8 @2024-05-03
+
+    Examples:
+        register_model_bulk_add_route(api_blueprint, User, 'users', 'users')
+
+    :param app: Flask application / Blueprints instance
+    :param model: The DB model class, ex)User
+    :param rule: The URL rule string, ex)/users
+    :param module: The module name for permission check, ex)users
+    :param action: The action of the module for permission check, ex)add
+    :param methods: The methods of the route, default is ['POST']
+    :param strict_slash: If not false, the rule url will end with slash
+    :param rule_suffix: The upsert suffix, default is 'bulk-add'
+    :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
+    :return:
+    """
+    methods = methods or ['POST']
+    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, rule_suffix=rule_suffix)
+
+    @app.route(suffix_rule, methods=methods, endpoint=endpoint)
+    @rest_permission_required(module, action)
+    @gen_route_method('bulk_add', base_rule)
+    def bulk_add():
+        request_json = request.json
+        req_log_data = json.dumps(request_json)
+        try:
+            model.bulk_add(request_json)
+            success, res_data = True, request_json
+        except Exception as e:
+            flaskz_logger.exception(e)
+            success, res_data = False, res_status_codes.db_add_err
+
+        res_log_data = get_log_data(res_data)
+        log_operation(module, 'add', success, req_log_data, res_log_data)
+        flaskz_logger.info(get_rest_log_msg('Bulk add {} data'.format(model.get_class_name()), req_log_data, success, res_log_data))
+
+        return create_response(success, res_data)
+
+
+def register_model_bulk_delete_route(app, model, rule, module=None, action='delete', methods=None, strict_slash=True, rule_suffix='bulk', endpoint=None):
+    """
+    Register bulk delete type URL rule for the specified model class to the application/blueprint.
+
+    .. versionadded:: 1.8 @2024-05-03
+
+    Examples:
+        register_model_bulk_delete_route(api_blueprint, User, 'users', 'users')
+
+    :param app: Flask application / Blueprints instance
+    :param model: The DB model class, ex)User
+    :param rule: The URL rule string, ex)/users
+    :param module: The module name for permission check, ex)users
+    :param action: The action of the module for permission check, ex)delete
+    :param methods: The methods of the route, default is ['DELETE']
+    :param strict_slash: If not false, the rule url will end with slash
+    :param rule_suffix: The upsert suffix, default is 'bulk-delete'
+    :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
+    :return:
+    """
+    methods = methods or ['DELETE']
+    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, did_suffix='<ids>', rule_suffix=rule_suffix)
+
+    @app.route(suffix_rule, methods=methods, endpoint=endpoint)
+    @app.route(did_rule, methods=methods, endpoint=endpoint)
+    @rest_permission_required(module, action)
+    @gen_route_method('bulk_delete', base_rule)
+    def bulk_delete(ids=None):
+        req_log_data = ids
+        if ids is None:
+            request_json = request.json
+            req_log_data = json.dumps(request_json)
+            ids = request_json
+            if type(request_json) is dict:
+                ids = request_json.get('ids') or request_json.get('id', [])
+        else:
+            ids = ids.split(',')
+        try:
+            success, res_data = True, model.bulk_delete(ids)
+        except Exception as e:
+            flaskz_logger.exception(e)
+            success, res_data = False, res_status_codes.db_delete_err
+
+        res_log_data = get_log_data(res_data)
+        log_operation(module, 'delete', success, req_log_data, res_log_data)
+        flaskz_logger.info(get_rest_log_msg('Bulk delete {} data'.format(model.get_class_name()), req_log_data, success, res_log_data))
+
+        return create_response(success, res_data)
+
+
+def register_model_bulk_update_route(app, model, rule, module=None, action='update', methods=None, strict_slash=True, rule_suffix='bulk', endpoint=None):
+    """
+    Register bulk update type URL rule for the specified model class to the application/blueprint.
+
+    .. versionadded:: 1.8 @2024-05-03
+
+    Examples:
+        register_model_bulk_update_route(api_blueprint, User, 'users', 'users')
+
+    :param app: Flask application / Blueprints instance
+    :param model: The DB model class, ex)User
+    :param rule: The URL rule string, ex)/users
+    :param module: The module name for permission check, ex)users
+    :param action: The action of the module for permission check, ex)update
+    :param methods: The methods of the route, default is ['PATCH']
+    :param strict_slash: If not false, the rule url will end with slash
+    :param rule_suffix: The upsert suffix, default is 'bulk-update'
+    :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
+    :return:
+    """
+    methods = methods or ['PATCH']
+    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, rule_suffix=rule_suffix)
+
+    @app.route(suffix_rule, methods=methods, endpoint=endpoint)
+    @rest_permission_required(module, action)
+    @gen_route_method('bulk_update', base_rule)
+    def bulk_update():
+        request_json = request.json
+        req_log_data = json.dumps(request_json)
+        try:
+            model.bulk_update(request_json)
+            success, res_data = True, request_json
+        except Exception as e:
+            flaskz_logger.exception(e)
+            success, res_data = False, res_status_codes.db_update_err
+
+        res_log_data = get_log_data(res_data)
+        log_operation(module, 'update', success, req_log_data, res_log_data)
+        flaskz_logger.info(get_rest_log_msg('Bulk update {} data'.format(model.get_class_name()), req_log_data, success, res_log_data))
+
+        return create_response(success, res_data)
+
+
+def _gen_route_rule(rule, *, strict_slash=True, did_suffix=None, rule_suffix=None):
     if not rule.startswith('/'):
         rule = '/' + rule
+    base_rule = rule
+    suffix_rule = rule
+    did_rule = None
 
-    if not rule.endswith('/'):
-        suffix_rule = rule + '/' + suffix
-    else:
-        suffix_rule = rule + suffix
+    if rule_suffix is not None:
+        suffix_rule = rule = rule.rstrip('/') + '/' + rule_suffix
+
+    if did_suffix is not None:
+        did_rule = rule.rstrip('/') + '/' + did_suffix
 
     if strict_slash is not False:
-        if not rule.endswith('/'):
-            rule = rule + '/'
-        suffix_rule += '/'
-    return rule, suffix_rule
+        base_rule = base_rule.rstrip('/') + '/'
+        suffix_rule = suffix_rule.rstrip('/') + '/'
+        did_rule = did_rule.rstrip('/') + '/' if did_rule else None
+
+    return base_rule, did_rule, suffix_rule
 
 
 from ._mgmt import *

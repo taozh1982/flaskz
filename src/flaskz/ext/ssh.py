@@ -171,12 +171,12 @@ class SSH(object):
             hostname = kwargs.pop('host', None)
 
         self._pre_commands = None  # @2024-04-14 add
+        self._pre_commands_run = False
         pre_commands = kwargs.pop('pre_commands', None)
         if type(pre_commands) is str:
             pre_commands = [pre_commands]
         if type(pre_commands) is list and len(pre_commands) > 0:
             self._pre_commands = pre_commands
-            self._pre_commands_run = False
 
         # self.transport = paramiko.Transport((hostname, port))
         self.transport = paramiko.Transport(_create_socket(hostname=hostname, port=port, timeout=self._timeout))

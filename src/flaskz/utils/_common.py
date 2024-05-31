@@ -1,10 +1,14 @@
+import json
 from collections.abc import Mapping
+from datetime import datetime, date, time
+from decimal import Decimal
 
 __all__ = [
     'filter_list', 'find_list', 'merge_list', 'each_list', 'get_list',
     'pop_dict_keys', 'del_dict_keys', 'get_deep', 'set_deep', 'merge_dict', 'get_ins_mapping', 'get_dict_mapping', 'get_dict_value_by_type',
-    'is_list', 'is_dict', 'slice_str',
     'get_wrap_str', 'is_str', 'str_replace', 'str_contains_any',
+    'is_list', 'is_dict', 'slice_str',
+    'json_dumps',
     'bulk_append_child',
     'parse_version'
 ]
@@ -503,6 +507,55 @@ def parse_version(version):
         else:
             versions.append(v)
     return versions
+
+
+# -------------------------------------------json-------------------------------------------
+def json_dumps(obj, **kwargs):
+    """
+    Serialize obj to a JSON formatted string, with support for additional data types.
+    The function extends the default JSON serialization capabilities of Python's json module by
+    providing custom serialization for types that are not natively supported,
+    such as datetime, date, time, Decimal, bytes, bytearray, set, and custom objects.
+
+    .. versionadded:: 1.8.0
+
+    Example:
+        json_dumps({
+            'str': 'example',
+            'integer': 1,
+            'float': 3.14,
+            'boolean': True,
+            'none': None,
+            'list': [1, 2, 3],
+            'dict': {'key': 'value'},
+            'tuple': (1, 2, 3),
+
+            'set': {1, 2, 3},
+            'datetime': datetime.now(),
+            'date': date.today(),
+            'time': datetime.now().time(),
+            'decimal': Decimal('10.5'),
+            'bytes': b'byte data',
+            'bytearray': bytearray(b'bytearray data')
+        }, indent=4)
+    :param obj:
+    :return:
+    """
+    if 'default' not in kwargs:
+        kwargs['default'] = _json_serializer
+    return json.dumps(obj, **kwargs)
+
+
+def _json_serializer(obj):
+    if isinstance(obj, (datetime, date, time)):
+        return obj.isoformat()
+    if isinstance(obj, (Decimal, bytes, bytearray)):
+        return str(obj)
+    if isinstance(obj, set):
+        return list(obj)
+    if hasattr(obj, '__dict__'):
+        return obj.__dict__
+    raise TypeError(f"Object of type '{obj.__class__.__name__}' is not JSON serializable")
 
 
 # -------------------------------------------private-------------------------------------------

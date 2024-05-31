@@ -13,6 +13,15 @@
 
 ## 版本
 
+- **1.8.0** `2024/06/01`
+    - [A] 扩展`flaskz.rest`路由生成模块
+        - 添加`register_model_bulk_route`函数, 用于生成指定数据模型的批量增删改路由
+        - 添加`register_model_bulk_add_route`函数, 用于生成指定数据模型的批量添加路由
+        - 添加`register_model_bulk_delete_route`函数, 用于生成指定数据模型的批量删除路由
+        - 添加`register_model_bulk_update_route`函数, 用于生成指定数据模型的批量更新路由
+    - [A] 添加`flaskz.utils.request`函数(替代`flaskz.utils.api_request`函数)
+    - [A] 添加`flaskz.utils.json_dumps`函数以序列化对象为JSON字符串
+    - [F] 修复`flaskz.ext.ssh.SSH`中`_pre_commands_run`的未赋值问题
 - **1.7.3** `2024/05/01`
     - [C] `flaskz.utils.ins_to_dict`函数返回的dict中包含值为`None`的键值
     - [A] `BaseModelMixin.to_dict`方法的`option`参数添加`relationships`选项，用于自定义是否查询关联关系

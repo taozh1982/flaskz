@@ -2,7 +2,7 @@ import inspect
 import textwrap
 from urllib import parse as urllib_parse
 
-from flask import request
+from flask import request as flask_request
 from requests import Session, sessions
 from requests.adapters import HTTPAdapter
 
@@ -10,7 +10,7 @@ from ._common import is_dict
 from .. import res_status_codes
 from ..log import flaskz_logger
 
-__all__ = ['api_request', 'forward_request', 'append_url_search_params']
+__all__ = ['request', 'api_request', 'forward_request', 'append_url_search_params']
 
 _session_request_kwargs = None
 
@@ -52,7 +52,50 @@ def api_request(url, method="GET", url_params=None, base_url="", raw_response=Fa
     :param kwargs:
     :return:
     """
+    # warnings.warn('flaskz.utils.api_request() has been replaced by flaskz.utils.request()', category=DeprecationWarning)
 
+    success, result = request(url, method=method, url_params=url_params, base_url=base_url, raw_response=raw_response, **kwargs)
+    if success:
+        return result
+    return res_status_codes.api_request_err, result
+
+
+def request(url, method="GET", url_params=None, base_url="", raw_response=False, **kwargs):
+    """
+    Request an api.
+
+   .. versionadded:: 1.8.0 - add to replace api_request @2024-05-02
+
+    Example
+        # post request
+        request('req_url', 'POST', json=payload)
+        request({'url': 'req_url', 'method': 'POST'}, json=payload)
+
+        # get request
+        request('req_url', headers={'Authorization': 'eyJhbGciOiJIUzUxMiIs......'})
+
+        # base url
+        request('req_url', base_url='base_url') # url --> 'base_url/req_url'
+
+        # url_variables
+        request('req_url/{id}/', url_variables={'id': 1}) # url --> 'req_url/1/'
+
+        # url_search_params
+        request('req_url', url_search_params={'id': 1}) # url --> 'req_url?id=1'
+
+        # http_kwargs
+        request('req_url', http_kwargs={ # --> HTTPAdapter parameters
+            'pool_connections': 10, 'pool_maxsize': 100, 'max_retries': 10
+        })
+
+    :param url:
+    :param method:
+    :param url_params:
+    :param raw_response:
+    :param base_url:
+    :param kwargs:
+    :return:
+    """
     _method = method
     if is_dict(url):
         _url = url.get('url')
@@ -97,13 +140,13 @@ def api_request(url, method="GET", url_params=None, base_url="", raw_response=Fa
         if kwargs.get('close') is not False:  # @2024-01-09 add
             res.close()
         if raw_response is True:
-            return res
-        return result
+            return True, res
+        return True, result
     except Exception as e:
         result = str(e)
         flaskz_logger.exception('Api request failed:\n' + result)
 
-    return res_status_codes.api_request_err, result
+    return False, result
 
 
 def forward_request(url, payload=None, raw_response=False, error_code=500, **kwargs):
@@ -130,25 +173,23 @@ def forward_request(url, payload=None, raw_response=False, error_code=500, **kwa
     _payload = payload or ['method', 'data', 'json', 'headers', 'cookies']
     for item in _payload:
         if item == 'json':  # @2022-05-06: fix request.json -->BadRequest('Content-Type was not 'application/json')
-            req_kwargs[item] = request.get_json(force=True, silent=True)
+            req_kwargs[item] = flask_request.get_json(force=True, silent=True)
         else:
-            req_kwargs[item] = getattr(request, item, None)
-    req_kwargs['params'] = request.args  # @2022-06-25 add query string
+            req_kwargs[item] = getattr(flask_request, item, None)
+    req_kwargs['params'] = flask_request.args  # @2022-06-25 add query string
     req_kwargs.update(kwargs)  # kwargs high priority
 
     url_params = req_kwargs.get('url_params')
     if url_params is None:  # if url_params is none, append request.view_args
-        req_kwargs['url_params'] = request.view_args or {}
+        req_kwargs['url_params'] = flask_request.view_args or {}
 
     req_kwargs['raw_response'] = True
 
-    res = api_request(**req_kwargs)
+    success, res = request(**req_kwargs)
+    if success is False:
+        return res, error_code
     if raw_response is True:
         return res
-
-    if type(res) is tuple:
-        return res[1], error_code
-
     return res.text, res.status_code, res.headers.items()
 
 
