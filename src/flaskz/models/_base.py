@@ -539,6 +539,55 @@ class BaseModelMixin:
         with db_session() as session:
             return session.query(cls).delete()
 
+    @classmethod
+    def delete_by(cls, by_dict):
+        """
+        Deletes data based on the specified conditions(fields).
+
+        .. versionadded:: 1.8.1
+
+        Example:
+            SysActionLog.delete_by({'type': 'login'})
+
+        :param by_dict:
+        :return: the deleted count
+        """
+        with db_session() as session:
+            result = session.query(cls).filter_by(**by_dict).delete()
+        return result
+
+    @classmethod
+    def delete_by_query(cls, query_options, no_criterion_allowed=False):
+        """
+        Deletes data that match the specified query criteria.
+
+        .. versionadded:: 1.8.1
+
+        Example:
+            SysActionLog.delete_by_query({
+                'module':'user',
+                'created_at': {
+                    '<': '2023-01-01 00:00:00'
+                }})
+
+        :param query_options:
+        :param no_criterion_allowed: if no_criterion_allowed is True and criterion is None, return 0
+        :return: the deleted count
+        """
+
+        query_options = parse_pss(cls, {
+            'search': query_options
+        })
+        with db_session() as session:
+            query = session.query(cls)
+            query = _append_pss_query_filters(query, query_options)
+            if no_criterion_allowed is True or query.whereclause is not None:
+                result = query.delete()
+            else:
+                result = 0
+
+        return result
+
     # -------------------------------------------query-------------------------------------------
     @classmethod
     def query(cls):
@@ -620,7 +669,7 @@ class BaseModelMixin:
     @classmethod
     def query_by(cls, by_dict, return_first=False):
         """
-        Query by dict object.
+        Query by specified attributes.
         -If first is not True, return the list result of the query.
         -If first is True, return the first row object or None.
 
@@ -879,4 +928,4 @@ class BaseModelMixin:
 from ..utils._cls import ins_to_dict
 from ..utils._common import find_list, filter_list, is_str, is_dict, is_list, get_dict_value_by_type
 from ._util import create_instance, create_relationships, db_session, append_query_filter, _db_session, _session_get, _refresh_instance, _append_pss_query_filters
-from ._query_util import get_col_op
+from ._query_util import get_col_op, parse_pss

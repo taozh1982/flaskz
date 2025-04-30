@@ -41,6 +41,8 @@ def ssh_run_command(connect_kwargs: dict, command: Union[str, list], run_kwargs:
     If command is a list, by default, returns the list of results , if run_kwargs.last_result==True returns the result of the last command
 
     .. versionadded:: 1.6.4
+    .. versionupdated::
+        1.8.1   - add retries
 
     Example:
         ssh_run_command({'hostname': hostname, 'username': username, 'password': password},'show running-config')
@@ -48,7 +50,7 @@ def ssh_run_command(connect_kwargs: dict, command: Union[str, list], run_kwargs:
         ssh_run_command(
             # connect_kwargs
             {'hostname': 'host', 'username': 'username', 'password': 'password',  # host
-             'timeout': 10,  # connect timeout
+             'timeout': 10, 'retries': 3,  # connect timeout and retry
              'secondary_password': 'enable_pwd',  # enable password
              'recv_endswith': ['# ', '$ ', ': ', '? ', '#'],  # recv endswith
              'channel_kwargs': {'width': 1000, 'timeout': 2}},  # channel kwargs
@@ -65,16 +67,26 @@ def ssh_run_command(connect_kwargs: dict, command: Union[str, list], run_kwargs:
     :param run_kwargs: the run command kwargs, ex) {'recv': False, 'prompt': False}
     :return: (success, result_or_err)
     """
-    connect_kwargs = connect_kwargs if connect_kwargs else {}
-    run_kwargs = run_kwargs if run_kwargs else {}
-    try:
-        with ssh_session(**connect_kwargs) as ssh:
-            if type(command) is list:
-                return True, ssh.run_command_list(command, **run_kwargs)
-            else:
-                return True, ssh.run_command(command, **run_kwargs)
-    except Exception as e:
-        return False, str(e)
+    connect_kwargs = connect_kwargs or {}
+    run_kwargs = run_kwargs or {}
+    retries = connect_kwargs.pop('retries', None)
+    if type(retries) is not int:  # @2025-01-12 add
+        retries = 1
+    else:
+        retries = max(retries, 1)
+    retry_count = 0
+    while retry_count < retries:
+        try:
+            with ssh_session(**connect_kwargs) as ssh:
+                if type(command) is list:
+                    return True, ssh.run_command_list(command, **run_kwargs)
+                else:
+                    return True, ssh.run_command(command, **run_kwargs)
+        except Exception as e:
+            if retry_count == retries - 1:
+                return False, str(e)
+            retry_count = retry_count + 1
+            time.sleep(0.1)
 
 
 def ssh_run_command_list(connect_kwargs: dict, command_list: list, run_kwargs: Optional[dict] = None) -> Tuple[bool, Union[list, str]]:
@@ -83,6 +95,8 @@ def ssh_run_command_list(connect_kwargs: dict, command_list: list, run_kwargs: O
     By default, returns the list of results , if run_kwargs.last_result==True returns the result of the last command
 
     .. versionadded:: 1.6.4
+    .. versionupdated::
+        1.8.1   - add retries
 
     Example:
         ssh.run_command_list({'hostname': hostname, 'username': username, 'password': password}, ['show version', 'show running-config'])
@@ -90,7 +104,7 @@ def ssh_run_command_list(connect_kwargs: dict, command_list: list, run_kwargs: O
         ssh_run_command_list(
             # connect_kwargs
             {'hostname': 'host', 'username': 'username', 'password': 'password',  # host
-             'timeout': 10,  # connect timeout
+             'timeout': 10, 'retries': 3,  # connect timeout and retry
              'secondary_password': 'enable_pwd',  # enable password
              'recv_endswith': ['# ', '$ ', ': ', '? ', '#'],  # recv endswith
              'channel_kwargs': {'width': 1000, 'timeout': 2}},  # channel kwargs
@@ -108,14 +122,23 @@ def ssh_run_command_list(connect_kwargs: dict, command_list: list, run_kwargs: O
 
     :return: (success, result_or_err)
     """
-    try:
-        connect_kwargs = connect_kwargs if connect_kwargs else {}
-        run_kwargs = run_kwargs if run_kwargs else {}
-
-        with ssh_session(**connect_kwargs) as ssh:
-            return True, ssh.run_command_list(command_list, **run_kwargs)
-    except Exception as e:
-        return False, str(e)
+    connect_kwargs = connect_kwargs or {}
+    run_kwargs = run_kwargs or {}
+    retries = connect_kwargs.pop('retries', None)
+    if type(retries) is not int:  # @2025-01-12 add
+        retries = 1
+    else:
+        retries = max(retries, 1)
+    retry_count = 0
+    while retry_count < retries:
+        try:
+            with ssh_session(**connect_kwargs) as ssh:
+                return True, ssh.run_command_list(command_list, **run_kwargs)
+        except Exception as e:
+            if retry_count == retries - 1:
+                return False, str(e)
+            retry_count = retry_count + 1
+            time.sleep(0.1)
 
 
 class SSH(object):
@@ -131,6 +154,7 @@ class SSH(object):
                   - optimize _recv_data function
             1.7.0 - add transport.is_authenticated() and channel.exit_status_ready() check
                   - add recv_start_delay kwargs
+            1.7.3 - add pre_commands kwargs
 
         Example:
             ssh = SSH(host, username, password)
@@ -141,7 +165,7 @@ class SSH(object):
             ssh.run_command_list(['show version', 'show running-config'])
             ssh.run_command_list(['enable', enable_pwd, 'show run'])
 
-            ssh = SSH(host, username, password, timeout=20, secondary_password=enable_pwd, recv_endswith=['# ', '$ ', ': ', '? ', '#'])
+            ssh = SSH(host, username, password, timeout=20, secondary_password=enable_pwd, recv_endswith=['# ', '$ ', ': ', '? ', '#'], pre_commands=['terminal length 0'])
             ssh.run_command_list(['enable', 'show run'])
             ssh.run_command_list(['enable', 'show run'], last_result=True) # return last command output
             ssh.run_command_list(['show version', 'show clock', 'show running-config'])
@@ -153,7 +177,8 @@ class SSH(object):
         :param kwargs:
                 - secondary_password: use for enable/sudo action, if None, the password needs to be sent through the command
                 - recv_endswith: use for stop receiving, default is ['# ', '$ ', ': ', '? ']
-                - timeout: timeout on blocking read/write operations & socket timer, default is 0
+                - pre_commands: the commands that are run before the command/commands are actually run
+                - timeout: timeout on blocking read/write operations & socket timer, default is 10
                 - connect_kwargs: kwargs for Transport.connect()
         """
         self._username = username
@@ -375,8 +400,10 @@ class SSH(object):
         return all_files
 
     def _run_command(self, command, recv=True, prompt=None):
-        _command = command.strip()
-        self.channel.send(_command + '\n')
+        _command = command  # @2025-02-03 remove strip()
+        if not _command.strip(' ').endswith(('?', '\t')):  # @2025-02-03 add
+            _command = _command + '\n'
+        self.channel.send(_command)
         if recv is False:
             return None
         output = self._recv_data(prompt)
@@ -453,6 +480,7 @@ class SSH(object):
             data = self.channel.recv(recv_max_bytes)
             info = data.decode('utf-8', 'backslashreplace')  # @2024-04-18 data.decode() --> current
             res = info.replace(' \r', '')
+            res = re.sub(r'\x1b\[[0-9;]*[A-Za-z]', '', res)  # @2025-02-03 add
             res_list.append(res)
             if len(info) < recv_max_bytes:  # read speed > write speed
                 if (prompt is not None and info.endswith(prompt)) or info.endswith(self.recv_endswith):
@@ -497,11 +525,11 @@ def _create_socket(hostname, port, timeout=0):
 
 def _get_command_arg(command, recv, clean):
     if type(command) is dict:
-        _command = command.get('command').strip()
+        _command = command.get('command')  # @2025-02-03 remove strip()
         _recv = command.get('recv') is not False if 'recv' in command else recv
         _clean = command.get('clean') is not False if 'clean' in command else clean
     else:
-        _command = command.strip()
+        _command = command  # @2025-02-03 remove strip()
         _recv = recv
         _clean = clean
     return _command, _recv, _clean

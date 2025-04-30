@@ -125,11 +125,13 @@ def register_model_route(app, model, rule, module=None, types=None, multi_models
     return app
 
 
-def register_model_bulk_route(app, model, rule, module=None, types=None, strict_slash=True):
+def register_model_bulk_route(app, model, rule, module=None, types=None, with_relationship=False, strict_slash=True):
     """
     Register url rules for bulk operations of the specified model class to the application/blueprint.
 
-    .. versionadded:: 1.8 @2024-05-03
+    .. versionadded:: 1.8
+    .. versionupdated::
+        1.8.1   - add with_relationship param
 
     Example:
         register_model_bulk_route(api_bp, User, 'users', 'users')
@@ -139,16 +141,17 @@ def register_model_bulk_route(app, model, rule, module=None, types=None, strict_
     :param rule: The URL rule string, ex)/users
     :param module: The module name for permission check, ex)users
     :param types: The types of the route, default is ['bulk_add', 'bulk_delete', 'bulk_update']
-    :param strict_slash: If not false, the rule url will end with slash
+    :param with_relationship: If True, the relationship data will be added/updated in bulk, default is False
+    :param strict_slash: If not False, the rule url will end with slash
     :return:
     """
     types = get_list(types, ['bulk_add', 'bulk_delete', 'bulk_update'])
     if 'bulk_add' in types:
-        register_model_bulk_add_route(app, model, rule, module, strict_slash=strict_slash)
+        register_model_bulk_add_route(app, model, rule, module, with_relationship=with_relationship, strict_slash=strict_slash)
     if 'bulk_delete' in types:
         register_model_bulk_delete_route(app, model, rule, module, strict_slash=strict_slash)
     if 'bulk_update' in types:
-        register_model_bulk_update_route(app, model, rule, module, strict_slash=strict_slash)
+        register_model_bulk_update_route(app, model, rule, module, with_relationship=with_relationship, strict_slash=strict_slash)
     return app
 
 
@@ -476,11 +479,13 @@ def register_models_query_route(app, models, rule, module=None, action=None, met
         return create_response(success, res_data)
 
 
-def register_model_bulk_add_route(app, model, rule, module=None, action='add', methods=None, strict_slash=True, rule_suffix='bulk', endpoint=None):
+def register_model_bulk_add_route(app, model, rule, module=None, action='add', methods=None, with_relationship=False, strict_slash=True, rule_suffix='bulk', endpoint=None):
     """
     Register bulk add type URL rule for the specified model class to the application/blueprint.
 
-    .. versionadded:: 1.8 @2024-05-03
+    .. versionadded:: 1.8
+    .. versionupdated::
+        1.8.1   - add with_relationship param
 
     Examples:
         register_model_bulk_add_route(api_blueprint, User, 'users', 'users')
@@ -491,7 +496,8 @@ def register_model_bulk_add_route(app, model, rule, module=None, action='add', m
     :param module: The module name for permission check, ex)users
     :param action: The action of the module for permission check, ex)add
     :param methods: The methods of the route, default is ['POST']
-    :param strict_slash: If not false, the rule url will end with slash
+    :param with_relationship: If True, the relationship data will be added in bulk, default is False
+    :param strict_slash: If not False, the rule url will end with slash
     :param rule_suffix: The upsert suffix, default is 'bulk-add'
     :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     :return:
@@ -506,7 +512,7 @@ def register_model_bulk_add_route(app, model, rule, module=None, action='add', m
         request_json = request.json
         req_log_data = json.dumps(request_json)
         try:
-            model.bulk_add(request_json)
+            model.bulk_add(request_json, with_relationship=with_relationship)
             success, res_data = True, request_json
         except Exception as e:
             flaskz_logger.exception(e)
@@ -523,7 +529,7 @@ def register_model_bulk_delete_route(app, model, rule, module=None, action='dele
     """
     Register bulk delete type URL rule for the specified model class to the application/blueprint.
 
-    .. versionadded:: 1.8 @2024-05-03
+    .. versionadded:: 1.8
 
     Examples:
         register_model_bulk_delete_route(api_blueprint, User, 'users', 'users')
@@ -569,11 +575,13 @@ def register_model_bulk_delete_route(app, model, rule, module=None, action='dele
         return create_response(success, res_data)
 
 
-def register_model_bulk_update_route(app, model, rule, module=None, action='update', methods=None, strict_slash=True, rule_suffix='bulk', endpoint=None):
+def register_model_bulk_update_route(app, model, rule, module=None, action='update', methods=None, with_relationship=False, strict_slash=True, rule_suffix='bulk', endpoint=None):
     """
     Register bulk update type URL rule for the specified model class to the application/blueprint.
 
-    .. versionadded:: 1.8 @2024-05-03
+    .. versionadded:: 1.8
+    .. versionupdated::
+        1.8.1   - add with_relationship param
 
     Examples:
         register_model_bulk_update_route(api_blueprint, User, 'users', 'users')
@@ -584,7 +592,8 @@ def register_model_bulk_update_route(app, model, rule, module=None, action='upda
     :param module: The module name for permission check, ex)users
     :param action: The action of the module for permission check, ex)update
     :param methods: The methods of the route, default is ['PATCH']
-    :param strict_slash: If not false, the rule url will end with slash
+    :param with_relationship: If True, the relationship data will be updated in bulk, default is False
+    :param strict_slash: If not False, the rule url will end with slash
     :param rule_suffix: The upsert suffix, default is 'bulk-update'
     :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     :return:
@@ -599,7 +608,7 @@ def register_model_bulk_update_route(app, model, rule, module=None, action='upda
         request_json = request.json
         req_log_data = json.dumps(request_json)
         try:
-            model.bulk_update(request_json)
+            model.bulk_update(request_json, with_relationship=with_relationship)
             success, res_data = True, request_json
         except Exception as e:
             flaskz_logger.exception(e)

@@ -13,6 +13,10 @@
 
 ## 版本
 
+- **1.8.1** `2025/05/01`
+    - [A] `BaseModelMixin`添加`delete_by`和`delete_by_query`方法, 用于删除符合指定条件的数据
+    - [A] `ssh_run_command`和`ssh_run_command_list`函数添加重试功能
+    - [A] `register_model_bulk_route`函数添加`with_relationship`参数, 用于设置API批量操作时是否更新关系数据
 - **1.8.0** `2024/06/01`
     - [A] 扩展`flaskz.rest`路由生成模块
         - 添加`register_model_bulk_route`函数, 用于生成指定数据模型的批量增删改路由
