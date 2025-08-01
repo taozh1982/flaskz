@@ -423,4 +423,5 @@ def _has_flask_g_context():
 
 def _session_get(session, cls, ident):  # @2023-12-08 update sqlalchemy and replace session.query(cls).get(ident) --> session.get(cls, ident)
     """Return an instance based on the given primary key identifier, or None if not found."""
+
     return session.get(cls, ident)

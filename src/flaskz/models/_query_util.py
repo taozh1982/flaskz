@@ -148,6 +148,9 @@ def _parse_relationships_search_filters(cls, pss_payload, pss_options, parse_opt
     """
     Returns pss config of the relationships
 
+    .. versionupdated::
+        - 1.8.2: change the key of relationships_filters to InstrumentedAttribute
+
     :param cls:
     :param pss_payload:
     :return:
@@ -168,21 +171,21 @@ def _parse_relationships_search_filters(cls, pss_payload, pss_options, parse_opt
             relationship_filed = keys[1]
             relationship = relationships.get(relationship_key)
             if relationship:
-                relationship_cls = relationship.mapper.class_
-                relationships_search.setdefault(relationship_cls, {}).update({relationship_filed: value})
+                relationships_search.setdefault(relationship, {}).update({relationship_filed: value})
     for key in relationships.keys():  # "role":{"name":"admin","like":"administrator"}
         col = cls.get_column_by_field(key)  # ?
         if col is not None:
             continue
         relationship_search_value = search.get(key, None)
         if type(relationship_search_value) is dict:
-            relationship_cls = relationships[key].mapper.class_
-            relationships_search.setdefault(relationship_cls, {}).update(relationship_search_value)
+            relationship = relationships.get(key)
+            relationships_search.setdefault(relationship, {}).update(relationship_search_value)
 
     cls_search_like, cls_search_ilike, cls_search_notlike, cls_search_notilike = _get_search_like_values(cls, search)
-    for relationship_cls, relationship_search_payload in relationships_search.items():
+    for relationship, relationship_search_payload in relationships_search.items():
         # @2023-12-12 add
         # Merge into global like query
+        relationship_cls = relationship.mapper.class_
         relationship_search = dict(relationship_search_payload)
         (search_like_field, search_like), (
             search_ilike_field, search_ilike), (
@@ -198,7 +201,7 @@ def _parse_relationships_search_filters(cls, pss_payload, pss_options, parse_opt
             relationship_search[search_notilike_field] = cls_search_notilike
 
         relationship_pss_options = _parse_search_filters(relationship_cls, relationship_search, parse_option)
-        relationships_filters[relationship_cls] = relationship_pss_options
+        relationships_filters[getattr(cls, relationship.key)] = relationship_pss_options  # @2025-06-18 RelationshipProperty --> InstrumentedAttribute
 
         if search_like is True:
             pss_options.setdefault('filter_likes', []).extend(relationship_pss_options.pop('filter_likes', []))

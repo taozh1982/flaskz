@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, Numeric
+from sqlalchemy import Integer, Numeric, func, distinct
 
 from .. import res_status_codes
 
@@ -308,7 +308,7 @@ class BaseModelMixin:
     @classmethod
     def check_add_data(cls, data):
         """
-        Check the the added json data.
+        Check the json data to be added.
         --validate the json data
         --check unique
         If the check result is not True, the adding process will be terminated and the check result will be returned to the client.
@@ -368,7 +368,7 @@ class BaseModelMixin:
     @classmethod
     def check_update_data(cls, data):
         """
-        Check the the updated json data.
+        Check the json data to be updated.
         --validate the json data
         --check exist
         --check unique
@@ -450,7 +450,7 @@ class BaseModelMixin:
     @classmethod
     def check_delete_data(cls, pk_value):
         """
-        Check the the deleted data.
+        Check the data to be deleted.
         --validate the deleted data
         --check exist
         If the check result is not True, the delete process will be terminated and the check result will be returned to the client.
@@ -619,7 +619,7 @@ class BaseModelMixin:
     def query_by_unique_key(cls, data):
         """
         Query data by the unique values.
-        --If exist,returns the instance.
+        --If existed,returns the instance.
         --Otherwise,returns None
 
         Example:
@@ -836,8 +836,8 @@ class BaseModelMixin:
             query = session.query(cls)
 
             # 1. outerjoin
-            for relationship_cls, relationship_pss_option in relationships_pss.items():  # @2023-12-05 add
-                query = query.outerjoin(relationship_cls)
+            for relationship_attr, relationship_pss_option in relationships_pss.items():  # @2025-06-12 change relationship_cls --> relationship_attr
+                query = query.outerjoin(relationship_attr)
                 query = _append_pss_query_filters(query, relationship_pss_option)
             # 2. filter cls and relationship_cls
             query = _append_pss_query_filters(query, pss_option)
@@ -848,7 +848,12 @@ class BaseModelMixin:
             if len(group) > 0:  # @2023-06-07 add
                 query = query.group_by(*group)
 
-            count = query.count()
+            # count = query.count()  # @2025-01-12 change
+            primary_column = cls.get_primary_column()
+            if primary_column is not None:
+                count = query.with_entities(func.count(distinct(primary_column))).scalar()
+            else:
+                count = query.count()
 
             if return_count is True:
                 return count

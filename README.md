@@ -13,6 +13,10 @@
 
 ## 版本
 
+- **1.8.2** `2025/08/01`
+    - [F] 修复`BaseModelMixin.query_pss`方法有`outerjoin`连接查询时, `count`计数问题
+    - [C] `BaseModelMixin.query_pss`方法中`outerjoin`的对象修改为模型类的`relationship`对象
+
 - **1.8.1** `2025/05/01`
     - [A] `BaseModelMixin`添加`delete_by`和`delete_by_query`方法, 用于删除符合指定条件的数据
     - [A] `ssh_run_command`和`ssh_run_command_list`函数添加重试功能
@@ -28,13 +32,13 @@
     - [F] 修复`flaskz.ext.ssh.SSH`中`_pre_commands_run`的未赋值问题
 - **1.7.3** `2024/05/01`
     - [C] `flaskz.utils.ins_to_dict`函数返回的dict中包含值为`None`的键值
-    - [A] `BaseModelMixin.to_dict`方法的`option`参数添加`relationships`选项，用于自定义是否查询关联关系
+    - [A] `BaseModelMixin.to_dict`方法的`option`参数添加`relationships`选项, 用于自定义是否查询关联关系
     - [A] `FLASKZ_DATABASE_SESSION_KWARGS`配置参数添加`reusable_in_flask_g`选项, 用于设置是否在`flask.g`中缓存&复用`session`对象(默认复用)
     - [C] `flaskz.ext.ssh`返回值保留文本两侧的空格
     - [A] `flaskz.ext.ssh.SSH`添加`pre_commands`参数, 用于在命令执行之前预先执行控制相关命令
 - **1.7.2** `2024/02/01`
     - [A] `flaskz.models.parse_pss`函数支持`like_columns`参数, 用于定义模糊查询列(默认使用模型类的like_columns)
-    - [A] `flaskz.utils.api_request`函数添加`http_kwargs`参数，用于设置http请求参数
+    - [A] `flaskz.utils.api_request`函数添加`http_kwargs`参数, 用于设置http请求参数
 - **1.7.1** `2024/01/05`
     - [F] 修复SQLAlchemy<2.0.0版本时, `flaskz.models._util.py`中`BinaryExpression`类的导入问题
 - **1.7.0** `2024/01/01`
