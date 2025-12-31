@@ -13,10 +13,12 @@
 
 ## 版本
 
+- **1.8.3** `2026/01/01`
+    - [A] 模型`Column.info`对象添加`cast_type`属性(类型/函数), 用于指定列在排序/过滤时的类型转换
+    - [F] 修复`BaseModelMixin.query_pss`方法有`group`分组查询时, `count`计数问题
 - **1.8.2** `2025/08/01`
     - [F] 修复`BaseModelMixin.query_pss`方法有`outerjoin`连接查询时, `count`计数问题
     - [C] `BaseModelMixin.query_pss`方法中`outerjoin`的对象修改为模型类的`relationship`对象
-
 - **1.8.1** `2025/05/01`
     - [A] `BaseModelMixin`添加`delete_by`和`delete_by_query`方法, 用于删除符合指定条件的数据
     - [A] `ssh_run_command`和`ssh_run_command_list`函数添加重试功能

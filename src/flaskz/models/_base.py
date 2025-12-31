@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, Numeric, func, distinct
+from sqlalchemy import Integer, Numeric, func
 
 from .. import res_status_codes
 
@@ -850,10 +850,12 @@ class BaseModelMixin:
 
             # count = query.count()  # @2025-01-12 change
             primary_column = cls.get_primary_column()
-            if primary_column is not None:
-                count = query.with_entities(func.count(distinct(primary_column))).scalar()
-            else:
-                count = query.count()
+
+            count = cls._query_pss_count(session, query, primary_column=primary_column, group_columns=group)  # @2023-12-18 change
+            # if primary_column is not None:
+            #     count = query.with_entities(func.count(distinct(primary_column))).scalar()
+            # else:
+            #     count = query.count()
 
             if return_count is True:
                 return count
@@ -875,6 +877,32 @@ class BaseModelMixin:
             'count': count,
             'data': items
         }
+
+    @classmethod
+    def _query_pss_count(cls, session, query, *, primary_column=None, group_columns=None):
+        """
+        Safely compute the total count for a PSS query.
+
+        .. versionadded:: 1.8.3
+
+        Counting rules:
+        - If `group_columns` is provided (non-empty), the count represents
+          the number of distinct groups after GROUP BY.
+        - If there is no GROUP BY and `primary_column` is provided, the count
+          represents the number of distinct primary entities, preventing
+          row inflation caused by joins.
+        - If neither grouping nor a primary column is available, the count
+          falls back to counting the total number of result rows.
+        """
+        group_columns = group_columns or []
+        if group_columns:
+            subq = query.with_entities(*group_columns).distinct().subquery()
+            return session.query(func.count()).select_from(subq).scalar()
+        if primary_column is not None:
+            subq = query.with_entities(primary_column).distinct().subquery()
+            return session.query(func.count()).select_from(subq).scalar()
+        subq = query.subquery()
+        return session.query(func.count()).select_from(subq).scalar()
 
     # -------------------------------------------check-------------------------------------------
     @classmethod

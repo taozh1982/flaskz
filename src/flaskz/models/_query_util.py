@@ -1,5 +1,8 @@
-from sqlalchemy import desc, asc, Column, and_, or_
+import types
+
+from sqlalchemy import desc, asc, Column, and_, or_, cast
 from sqlalchemy.sql.elements import UnaryExpression
+from sqlalchemy.types import TypeEngine
 
 __all__ = ['parse_pss']
 
@@ -118,9 +121,9 @@ def _parse_search_filters(cls, search, parse_option):
     # @2023-12-05 add _like & _ilike
 
     like_filters, ilike_filters, notlike_filters, notilike_filters = _parse_search_like_filters(cls, search, *_get_search_like_values(cls, search))
+
     ands = []
     ors = []
-
     search_ands_field, search_ands = _get_first_non_column_field_value(cls, search, _get_parse_option_keywords('ands'))  # search.pop('_ands', None)
     if search_ands:
         for key in search_ands:
@@ -224,6 +227,7 @@ def _append_search_filters(items, cls, key, value, parse_option):
     col = cls.get_column_by_field(key)
     if col is None:
         return items
+    col = _get_column_cast(col)
     ignore_null = parse_option.get('ignore_null')
     str_sep = parse_option.get('str_sep')
     if value is not None or ignore_null is False:
@@ -427,7 +431,7 @@ def _parse_sorts(cls, sort):
         if is_str(sort_item):  # sort: "name"/["name"...]  'role.name'
             sort_column = _get_column_by_field(cls, sort_item)
             if sort_column is not None:
-                orders.append(asc(sort_column))
+                orders.append(asc(_get_column_cast(sort_column)))
         elif type(sort_item) is Column:  # User.name
             if sort_item in cls.get_columns():
                 orders.append(asc(sort_item))
@@ -443,9 +447,9 @@ def _parse_sorts(cls, sort):
                     sort_column = _get_column_by_field(cls, sort_field)
                     if sort_column is not None:
                         if _order and str(_order).strip().lower() in ['desc', 'descend', 'descending']:  # {"field": "name", "order": "desc"}
-                            orders.append(desc(sort_column))
+                            orders.append(desc(_get_column_cast(sort_column)))
                         else:
-                            orders.append(asc(sort_column))  # {"field": "name"}.
+                            orders.append(asc(_get_column_cast(sort_column)))  # {"field": "name"}.
     return orders
 
 
@@ -466,6 +470,31 @@ def _get_column_by_field(cls, field, include_relationship=True):
                 relationship_cls = relationship.mapper.class_
                 sort_column = relationship_cls.get_column_by_field(relationship_filed)
     return sort_column
+
+
+def _get_column_cast(column):
+    """
+    Cast a column to the specified type, if 'cast_type' in its 'info' dict.
+
+    .. versionadded:: 1.8.3 - add @2025-12-01
+
+    Example:
+    grade = Column(String(100), info={'cast_type': BigInteger})
+    """
+    cast_type = column.info.get('cast_type')
+    if cast_type is None:
+        return column
+    if isinstance(cast_type, types.FunctionType):
+        cast_result = cast_type(column)
+        if cast_result is None:
+            return column
+        if isinstance(cast_result, type) and issubclass(cast_result, TypeEngine):
+            return cast(column, cast_result)
+        return cast_result
+
+    if isinstance(cast_type, type) and issubclass(cast_type, TypeEngine):
+        column = cast(column, cast_type)
+    return column
 
 
 from ..utils import is_str, is_dict, is_list
