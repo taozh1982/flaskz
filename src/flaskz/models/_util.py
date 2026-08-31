@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 
-from flask import g
+from .._compat.flask import g
 from sqlalchemy import text, or_, and_, inspect
 from sqlalchemy.sql.elements import BinaryExpression  # @2024-01-04 update, BinaryExpression not in sqlalchemy.__init__.py when sqlalchemy<2.0.0
 

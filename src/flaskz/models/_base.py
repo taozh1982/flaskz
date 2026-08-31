@@ -446,6 +446,68 @@ class BaseModelMixin:
                 setattr(instance, field, relationships[field])
         return instance
 
+    @classmethod
+    def update_by(cls, by_dict, update_values):
+        """
+        Updates data based on the specified conditions(fields).
+
+        .. versionadded:: 1.8.6
+
+        Example:
+            User.update_by(
+                {'status': 'disable'}, # conditions
+                {'status': 'enable'}   # new value
+            )
+
+        :param by_dict: update conditions using field equality matching
+        :param update_values: fields and values to update
+        :return: the count of rows matched by the update condition.
+        """
+        with db_session() as session:
+            result = session.query(cls).filter_by(**by_dict).update(update_values)
+        return result
+
+    @classmethod
+    def update_by_query(cls, query_options, update_values, no_criterion_allowed=False):
+        """
+        Updates data that match the specified query criteria.
+
+        .. versionadded:: 1.8.6
+
+        Example:
+            User.update_by_query(
+                {
+                    'type': {
+                        '!=': 'local',
+                    }
+                },
+                {
+                    'status': 'disable'
+                })
+
+        :param query_options: query conditions used to select records
+        :param update_values: fields and values to update
+        :param no_criterion_allowed: whether updates are allowed without query conditions
+            - if False and no query condition exists, skip the update operation and return 0
+            - if True and no query condition exists, update all records and return the count
+
+        :return: the updated count(matched by the query condition)
+        """
+
+        query_options = parse_pss(cls, {
+            'search': query_options
+        })
+
+        with db_session() as session:
+            query = session.query(cls)
+            query = _append_pss_query_filters(query, query_options)
+            if no_criterion_allowed is True or query.whereclause is not None:
+                result = query.update(update_values)
+            else:
+                result = 0
+
+        return result
+
     # -------------------------------------------delete-------------------------------------------
     @classmethod
     def check_delete_data(cls, pk_value):
@@ -570,9 +632,12 @@ class BaseModelMixin:
                     '<': '2023-01-01 00:00:00'
                 }})
 
-        :param query_options:
-        :param no_criterion_allowed: if no_criterion_allowed is True and criterion is None, return 0
-        :return: the deleted count
+        :param query_options: query conditions used to select records
+        :param no_criterion_allowed: whether deletion is allowed without query conditions
+            - if False and no query condition exists, skip the delete operation and return 0
+            - if True and no query condition exists, delete all records and return the count
+
+        :return: the deleted count(matched by the query condition)
         """
 
         query_options = parse_pss(cls, {

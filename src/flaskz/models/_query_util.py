@@ -171,10 +171,10 @@ def _parse_relationships_search_filters(cls, pss_payload, pss_options, parse_opt
         keys = key.split('.')
         if len(keys) == 2:
             relationship_key = keys[0]
-            relationship_filed = keys[1]
+            relationship_field = keys[1]
             relationship = relationships.get(relationship_key)
             if relationship:
-                relationships_search.setdefault(relationship, {}).update({relationship_filed: value})
+                relationships_search.setdefault(relationship, {}).update({relationship_field: value})
     for key in relationships.keys():  # "role":{"name":"admin","like":"administrator"}
         col = cls.get_column_by_field(key)  # ?
         if col is not None:
@@ -464,11 +464,11 @@ def _get_column_by_field(cls, field, include_relationship=True):
         if len(keys) == 2:
             relationships = cls.get_relationships()
             relationship_key = keys[0]
-            relationship_filed = keys[1]
+            relationship_field = keys[1]
             relationship = relationships.get(relationship_key)
             if relationship:
                 relationship_cls = relationship.mapper.class_
-                sort_column = relationship_cls.get_column_by_field(relationship_filed)
+                sort_column = relationship_cls.get_column_by_field(relationship_field)
     return sort_column
 
 

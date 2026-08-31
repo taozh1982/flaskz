@@ -1,6 +1,6 @@
 ## 关于
 
-*Flaskz*是*Flask*和*SQLAlchemy ORM*的扩展工具集, 主要用于web应用的开发, 可以快速灵活的实现各种业务场景并提供API。
+*Flaskz*是以*SQLAlchemy ORM*为核心、可选集成*Flask*的扩展工具集，适用于Web应用、脚本和后台任务等场景，可快速、灵活实现数据模型操作、条件查询、API生成和操作日志等功能。
 
 ## 使用
 
@@ -13,6 +13,9 @@
 
 ## 版本
 
+- **1.8.6** `2026/09/01`
+    - [A] 将`Flask`和`requests`调整为可选依赖(按需安装)
+    - [A] `BaseModelMixin`添加`update_by`和`update_by_query`方法, 用于更新符合指定条件的数据
 - **1.8.3** `2026/01/01`
     - [A] 模型`Column.info`对象添加`cast_type`属性(类型/函数), 用于指定列在排序/过滤时的类型转换
     - [F] 修复`BaseModelMixin.query_pss`方法有`group`分组查询时, `count`计数问题

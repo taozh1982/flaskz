@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import current_app
+from .._compat.flask import current_app
 
 from ..utils import get_wrap_str, filter_list
 

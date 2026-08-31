@@ -2,13 +2,14 @@ import sqlite3
 import time
 from datetime import datetime
 
-from flask import Flask
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine import ExceptionContext
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
+from .._compat.flask import is_flask_app
 
 DBSession = sessionmaker(autocommit=False)
 
@@ -23,7 +24,7 @@ def init_model(app):
         init_model(flask_app)
 
     """
-    is_app = isinstance(app, Flask)
+    _is_flask_app = is_flask_app(app)
     app_config = get_app_config_items(app) or {}
     database_uri = app_config.get('FLASKZ_DATABASE_URI')
 
@@ -78,7 +79,7 @@ def init_model(app):
         flaskz_logger.exception('Connect to database ' + database_uri + ' error\n')
         return
 
-    if not is_app:
+    if not _is_flask_app:
         return
 
     @app.teardown_appcontext

@@ -1,7 +1,7 @@
 import math
 import time
 
-from flask import current_app, g
+from .._compat.flask import current_app, g
 
 from ._common import is_dict
 

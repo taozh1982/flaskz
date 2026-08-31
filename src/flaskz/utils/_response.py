@@ -1,4 +1,4 @@
-from flask import current_app
+from .._compat.flask import current_app
 
 from ._app import get_app_config
 

@@ -1,11 +1,9 @@
 import json
 
-from flask import request
-
 from .. import res_status_codes
 from ..log import flaskz_logger, get_log_data
-from ..models import model_to_dict, query_all_models, ModelMixin, parse_pss
-from ..utils import get_list, is_dict, create_response, get_request_json
+from ..models import ModelMixin, model_to_dict, parse_pss, query_all_models
+from ..utils import create_response, get_list, get_request_json, is_dict
 
 
 def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, routers=None, to_json_option=None, multiple_option=None):
@@ -180,7 +178,7 @@ def register_model_add_route(app, model, rule, module=None, action='add', method
     @rest_permission_required(module, action)
     @gen_route_method('add', base_rule)
     def add():
-        request_json = request.json
+        request_json = get_request_json({})  # @2026-08-11, request.json --> get_request_json({})
         req_log_data = json.dumps(request_json)
 
         success, data = model.add(request_json)
@@ -259,7 +257,7 @@ def register_model_update_route(app, model, rule, module=None, action='update', 
     @rest_permission_required(module, action)
     @gen_route_method('update', base_rule)
     def update(did=None):
-        request_json = request.json
+        request_json = get_request_json({})  # @2026-08-11, request.json --> get_request_json({})
         if did is not None:
             request_json[model.get_primary_field()] = did  # use pk in url
         req_log_data = json.dumps(request_json)
@@ -300,7 +298,7 @@ def register_model_upsert_route(app, model, rule, module=None, action='upsert', 
     @rest_permission_required(module, action)
     @gen_route_method('upsert', base_rule)
     def upsert():
-        request_json = request.json
+        request_json = get_request_json({})  # @2026-08-11, request.json --> get_request_json({})
         req_log_data = json.dumps(request_json)
 
         if request_json.get(model.get_primary_field()):
@@ -509,7 +507,7 @@ def register_model_bulk_add_route(app, model, rule, module=None, action='add', m
     @rest_permission_required(module, action)
     @gen_route_method('bulk_add', base_rule)
     def bulk_add():
-        request_json = request.json
+        request_json = get_request_json({})  # @2026-08-11, request.json --> get_request_json({})
         req_log_data = json.dumps(request_json)
         try:
             model.bulk_add(request_json, with_relationship=with_relationship)
@@ -555,7 +553,7 @@ def register_model_bulk_delete_route(app, model, rule, module=None, action='dele
     def bulk_delete(ids=None):
         req_log_data = ids
         if ids is None:
-            request_json = request.json
+            request_json = get_request_json({})  # @2026-08-11, request.json --> get_request_json({})
             req_log_data = json.dumps(request_json)
             ids = request_json
             if type(request_json) is dict:
@@ -605,7 +603,7 @@ def register_model_bulk_update_route(app, model, rule, module=None, action='upda
     @rest_permission_required(module, action)
     @gen_route_method('bulk_update', base_rule)
     def bulk_update():
-        request_json = request.json
+        request_json = get_request_json({})  # @2026-08-11, request.json --> get_request_json({})
         req_log_data = json.dumps(request_json)
         try:
             model.bulk_update(request_json, with_relationship=with_relationship)

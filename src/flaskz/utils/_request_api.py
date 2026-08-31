@@ -2,12 +2,10 @@ import inspect
 import textwrap
 from urllib import parse as urllib_parse
 
-from flask import request as flask_request
-from requests import Session, sessions
-from requests.adapters import HTTPAdapter
-
 from ._common import is_dict
 from .. import res_status_codes
+from .._compat.flask import request as flask_request
+from .._compat.requests import HTTPAdapter, Session, sessions
 from ..log import flaskz_logger
 
 __all__ = ['request', 'api_request', 'forward_request', 'append_url_search_params']
@@ -256,7 +254,7 @@ def _request(method, url, **kwargs):
 
 
 def _get_session_request_kwargs(kwargs):
-    global _session_request_kwargs
+    global _session_request_kwargs  # avoid the "unexpected keyword argument" exception.
     if _session_request_kwargs is None:
         _session_request_kwargs = []
         for key in inspect.signature(Session.request).parameters:

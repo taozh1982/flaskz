@@ -1,6 +1,6 @@
 import os
 
-from flask import current_app
+from .._compat.flask import current_app
 
 __all__ = ['init_app_config', 'get_app_config', 'get_app_config_items', 'get_app_path']
 

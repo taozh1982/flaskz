@@ -1,6 +1,6 @@
 import warnings
 
-from flask import request
+from .._compat.flask import request
 
 __all__ = ['get_remote_addr', 'is_ajax', 'get_request_json', 'get_pss']
 
