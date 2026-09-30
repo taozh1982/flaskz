@@ -103,7 +103,7 @@ def get_g_cache(key):
         cache = getattr(g, 'z_data_cache', None)
         if cache:
             return cache.get(key)
-        return None
+    return None
 
 
 def remove_g_cache(key):

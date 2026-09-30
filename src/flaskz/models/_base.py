@@ -89,6 +89,7 @@ class BaseModelMixin:
         for col in cls.get_columns():
             if (cls.get_column_field(col)) == field:
                 return col
+        return None
 
     @classmethod
     def get_primary_column(cls):
@@ -348,8 +349,8 @@ class BaseModelMixin:
         Perform a bulk add of the given list of mapping dictionaries.(atomic)
 
         sa version upgrade: https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html
-        :param items:
-        :param with_relationship:
+        :param items: The data list to be added
+        :param with_relationship: Whether to add relationship data
         :return:
         """
         if len(items) == 0:
@@ -418,8 +419,8 @@ class BaseModelMixin:
         Perform a bulk update of the given list of mapping dictionaries.(atomic)
 
         sa version upgrade: https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html
-        :param items:
-        :param with_relationship:
+        :param items: The data list to be updated
+        :param with_relationship: Whether to update relationship data
         :return:
         """
         if len(items) == 0:
@@ -555,7 +556,7 @@ class BaseModelMixin:
     @classmethod
     def bulk_delete(cls, items):
         """
-        Perform a bulk delete of the given list of mapping dictionaries.(not atomic)
+        Perform a bulk delete of the given list of primary keys or mapping dictionaries.(atomic)
 
         .. versionupdated:: 1.0
 
@@ -563,11 +564,11 @@ class BaseModelMixin:
             User.bulk_delete([1,2,3])   # pk list
             User.bulk_delete([{'id': 1}, {'id': 2}, {'id': 3}]) # dict list
 
-        :param items:
-        :return: the deleted count
+        :param items: The primary key or condition list to be deleted
+        :return:
         """
         if len(items) == 0:
-            return
+            return 0
         pk = cls.get_primary_field()
         count = 0
         with db_session() as session:
@@ -981,6 +982,7 @@ class BaseModelMixin:
         pk = cls.get_primary_field()
         if pk:
             return data.get(pk)
+        return None
 
     @classmethod
     def _check_exist(cls, data):

@@ -75,7 +75,7 @@ def init_model_rest_blueprint(model_cls, api_blueprint, url_prefix, module, rout
 
 def register_model_route(app, model, rule, module=None, types=None, multi_models=None, to_json_option=None, get_pss_config=None, strict_slash=True):
     """
-    Register url rules for the specified model class to the application/blueprint.
+    Register URL rules for the specified model class on the application/blueprint.
 
     .. versionadded:: 1.5
     .. versionupdated::
@@ -85,14 +85,14 @@ def register_model_route(app, model, rule, module=None, types=None, multi_models
         register_model_route(api_bp, User, 'users', 'users')
 
     :param app: Flask application / Blueprint instance
-    :param model: The DB model class, ex)User
-    :param rule: The URL rule string, ex)/users
-    :param module: The module name for permission check, ex)users
+    :param model: The DB model class, e.g. ``User``
+    :param rule: The URL rule string, e.g. ``users``
+    :param module: The module name for permission check, e.g. ``users``
     :param types: The types of the route, default is ['query', 'pss', 'multi', 'add', 'update', 'upsert', 'delete']
     :param multi_models: The multiple DB model classes
-    :param to_json_option: The option to return the json, ex){'cascade': 1}
+    :param to_json_option: The option used to serialize model data to JSON, e.g. ``{'cascade': 1}``
     :param get_pss_config: The callback function to custom pss query config
-    :param strict_slash: If not false, the rule url will end with slash
+    :param strict_slash: If not false, the rule URL will end with slash
     :return:
     """
     if type(get_pss_config) is bool:  # version match
@@ -125,7 +125,7 @@ def register_model_route(app, model, rule, module=None, types=None, multi_models
 
 def register_model_bulk_route(app, model, rule, module=None, types=None, with_relationship=False, strict_slash=True):
     """
-    Register url rules for bulk operations of the specified model class to the application/blueprint.
+    Register URL rules for bulk operations of the specified model class on the application/blueprint.
 
     .. versionadded:: 1.8
     .. versionupdated::
@@ -135,12 +135,12 @@ def register_model_bulk_route(app, model, rule, module=None, types=None, with_re
         register_model_bulk_route(api_bp, User, 'users', 'users')
 
     :param app: Flask application / Blueprint instance
-    :param model: The DB model class, ex)User
-    :param rule: The URL rule string, ex)/users
-    :param module: The module name for permission check, ex)users
+    :param model: The DB model class, e.g. ``User``
+    :param rule: The URL rule string, e.g. ``users``
+    :param module: The module name for permission check, e.g. ``users``
     :param types: The types of the route, default is ['bulk_add', 'bulk_delete', 'bulk_update']
     :param with_relationship: If True, the relationship data will be added/updated in bulk, default is False
-    :param strict_slash: If not False, the rule url will end with slash
+    :param strict_slash: If not False, the rule URL will end with slash
     :return:
     """
     types = get_list(types, ['bulk_add', 'bulk_delete', 'bulk_update'])
@@ -155,19 +155,19 @@ def register_model_bulk_route(app, model, rule, module=None, types=None, with_re
 
 def register_model_add_route(app, model, rule, module=None, action='add', methods=None, to_json_option=None, strict_slash=True, endpoint=None):
     """
-    Register a add type URL rule for the specified model class to the application/blueprint.
+    Register a URL rule for adding data for the specified model class on the application/blueprint.
 
     Examples:
         register_model_add_route(api_blueprint, User, 'users', 'users')
 
     :param app: Flask application / Blueprints instance
-    :param model: The DB model class, ex)User
-    :param rule: The URL rule string, ex)/users
-    :param module: The module name for permission check, ex)users
-    :param action: The action of the module for permission check, ex)add
+    :param model: The DB model class, e.g. ``User``
+    :param rule: The URL rule string, e.g. ``users``
+    :param module: The module name for permission check, e.g. ``users``
+    :param action: The action of the module for permission check, e.g. ``add``
     :param methods: The methods of the route, default is ['POST']
-    :param to_json_option: The option to return the json, ex){'cascade': 1}
-    :param strict_slash: If not false, the rule url will end with slash
+    :param to_json_option: The option used to serialize model data to JSON, e.g. ``{'cascade': 1}``
+    :param strict_slash: If not false, the rule URL will end with slash
     :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     :return:
     """
@@ -193,7 +193,7 @@ def register_model_add_route(app, model, rule, module=None, action='add', method
 
 def register_model_delete_route(app, model, rule, module=None, action='delete', methods=None, to_json_option=None, strict_slash=True, endpoint=None):
     """
-    Register a delete type URL rule for the specified model class to the application/blueprint.
+    Register a URL rule for deleting data for the specified model class on the application/blueprint.
 
     .. versionupdated::
         1.2   - add path converter of the did
@@ -203,13 +203,13 @@ def register_model_delete_route(app, model, rule, module=None, action='delete', 
         register_model_delete_route(api_blueprint, User, 'users', 'users')
 
     :param app: Flask application / Blueprints instance
-    :param model: The DB model class, ex)User
-    :param rule: The URL rule string, ex)/users
-    :param module: The module name for permission check, ex)users
-    :param action: The action of the module for permission check, ex)delete
+    :param model: The DB model class, e.g. ``User``
+    :param rule: The URL rule string, e.g. ``users``
+    :param module: The module name for permission check, e.g. ``users``
+    :param action: The action of the module for permission check, e.g. ``delete``
     :param methods: The methods of the route, default is ['DELETE']
-    :param to_json_option: The option to return the json, ex){'cascade': 1}
-    :param strict_slash: If not false, the rule url will end with slash
+    :param to_json_option: The option used to serialize model data to JSON, e.g. ``{'cascade': 1}``
+    :param strict_slash: If not false, the rule URL will end with slash
     :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     :return:
     """
@@ -232,20 +232,20 @@ def register_model_delete_route(app, model, rule, module=None, action='delete', 
 
 def register_model_update_route(app, model, rule, module=None, action='update', methods=None, to_json_option=None, strict_slash=True, endpoint=None):
     """
-    Register update type URL rule for the specified model class to the application/blueprint.
-    The priority of the primary key in the url is higher than that in the body.
+    Register a URL rule for updating data for the specified model class on the application/blueprint.
+    The priority of the primary key in the URL is higher than that in the body.
 
     Examples:
         register_model_update_route(api_blueprint, User, 'users', 'users')
 
     :param app: Flask application / Blueprints instance
-    :param model: The DB model class, ex)User
-    :param rule: The URL rule string, ex)/users
-    :param module: The module name for permission check, ex)users
-    :param action: The action of the module for permission check, ex)update
+    :param model: The DB model class, e.g. ``User``
+    :param rule: The URL rule string, e.g. ``users``
+    :param module: The module name for permission check, e.g. ``users``
+    :param action: The action of the module for permission check, e.g. ``update``
     :param methods: The methods of the route, default is ['PATCH']
-    :param to_json_option: The option to return the json, ex){'cascade': 1}
-    :param strict_slash: If not false, the rule url will end with slash
+    :param to_json_option: The option used to serialize model data to JSON, e.g. ``{'cascade': 1}``
+    :param strict_slash: If not false, the rule URL will end with slash
     :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     :return:
     """
@@ -259,7 +259,7 @@ def register_model_update_route(app, model, rule, module=None, action='update', 
     def update(did=None):
         request_json = get_request_json({})  # @2026-08-11, request.json --> get_request_json({})
         if did is not None:
-            request_json[model.get_primary_field()] = did  # use pk in url
+            request_json[model.get_primary_field()] = did  # use pk in URL
         req_log_data = json.dumps(request_json)
 
         success, data = model.update(request_json)
@@ -274,20 +274,21 @@ def register_model_update_route(app, model, rule, module=None, action='update', 
 
 def register_model_upsert_route(app, model, rule, module=None, action='upsert', methods=None, to_json_option=None, strict_slash=True, rule_suffix='upsert', endpoint=None):
     """
-    Register a upsert type URL rule for the specified model class to the application/blueprint.
+    Register a URL rule for upserting data for the specified model class on the application/blueprint.
+
     If primary key value is in json, perform an update action, otherwise perform an add action.
 
     Examples:
         register_model_upsert_route(api_blueprint, User, 'users', 'users')
 
     :param app: Flask application / Blueprints instance
-    :param model: The DB model class, ex)User
-    :param rule: The URL rule string, ex)/users
-    :param module: The module name for permission check, ex)users
-    :param action: The action of the module for permission check, ex)update
+    :param model: The DB model class, e.g. ``User``
+    :param rule: The URL rule string, e.g. ``users``
+    :param module: The module name for permission check, e.g. ``users``
+    :param action: The action of the module for permission check, e.g. ``update``
     :param methods: The methods of the route, default is ['PATCH']
-    :param to_json_option: The option to return the json, ex){'cascade': 1}
-    :param strict_slash: If not false, the rule url will end with slash
+    :param to_json_option: The option used to serialize model data to JSON, e.g. ``{'cascade': 1}``
+    :param strict_slash: If not false, the rule URL will end with slash
     :param rule_suffix: The upsert suffix, default is 'upsert'
     :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     """
@@ -318,19 +319,19 @@ def register_model_upsert_route(app, model, rule, module=None, action='upsert', 
 
 def register_model_query_route(app, model, rule, module=None, action=None, methods=None, to_json_option=None, strict_slash=True, endpoint=None):
     """
-    Register query type URL rule for the specified model class to the application/blueprint.
+    Register a URL rule for querying data for the specified model class on the application/blueprint.
 
     Examples:
         register_model_query_route(api_blueprint, User, 'users', 'users')
 
     :param app: Flask application / Blueprints instance
-    :param model: The DB model class, ex)User
-    :param rule: The URL rule string, ex)/users
-    :param module: The module name for permission check, ex)users
+    :param model: The DB model class, e.g. ``User``
+    :param rule: The URL rule string, e.g. ``users``
+    :param module: The module name for permission check, e.g. ``users``
     :param action: The action of the module for permission check, default is None(only check module permission)
     :param methods: The methods of the route, default is ['GET']
-    :param to_json_option: The option to return the json, ex){'cascade': 1}
-    :param strict_slash: If not false, the rule url will end with slash
+    :param to_json_option: The option used to serialize model data to JSON, e.g. ``{'cascade': 1}``
+    :param strict_slash: If not false, the rule URL will end with slash
     :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     :return:
     """
@@ -363,7 +364,7 @@ def register_model_query_route(app, model, rule, module=None, action=None, metho
 def register_model_query_pss_route(app, model, rule, module=None, action=None, methods=None, to_json_option=None, strict_slash=True, rule_suffix='pss', get_pss_config=None,
                                    endpoint=None):
     """
-    Register pss query URL rule for the specified model class to the application/blueprint.
+    Register a URL rule for pss queries for the specified model class on the application/blueprint.
     pss = paging + search + sort
 
     .. versionadded::
@@ -373,13 +374,13 @@ def register_model_query_pss_route(app, model, rule, module=None, action=None, m
         register_model_query_pss_route(api_blueprint, User, 'users', 'users', get_pss_config=append_search_config)
 
     :param app: Flask application / Blueprints instance
-    :param model: The DB model class, ex)User
-    :param rule: The URL rule string, ex)/users
-    :param module: The module name for permission check, ex)users
+    :param model: The DB model class, e.g. ``User``
+    :param rule: The URL rule string, e.g. ``users``
+    :param module: The module name for permission check, e.g. ``users``
     :param action: The action of the module for permission check, default is None(only check module permission)
     :param methods: The methods of the route, default is ['GET', 'POST']
-    :param to_json_option: The option to return the json, ex){'cascade': 1}
-    :param strict_slash: If not false, the rule url will end with slash
+    :param to_json_option: The option used to serialize model data to JSON,  e.g. ``{'cascade': 1}``
+    :param strict_slash: If not false, the rule URL will end with slash
     :param rule_suffix: The pss suffix, default is 'query_pss'
     :param get_pss_config: Callback function used to generate pss config.
     :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
@@ -408,8 +409,7 @@ def register_model_query_pss_route(app, model, rule, module=None, action=None, m
 
 def register_models_query_route(app, models, rule, module=None, action=None, methods=None, strict_slash=True, rule_suffix='multi', endpoint=None):
     """
-    Register query multi models URL rule to the application/blueprint.
-    pss = paging + search + sort
+    Register a URL rule for querying the specified models on the application/blueprint.
 
     Examples:
         register_models_query_route(api_blueprint,
@@ -427,11 +427,11 @@ def register_models_query_route(app, models, rule, module=None, action=None, met
 
     :param app: Flask application / Blueprints instance
     :param models: The multiple DB model classes,
-    :param rule: The URL rule string, ex)/users
-    :param module: The module name for permission check, ex)users
+    :param rule: The URL rule string, e.g. ``users``
+    :param module: The module name for permission check, e.g. ``users``
     :param action: The action of the module for permission check, default is None(only check module permission)
     :param methods: The methods of the route, default is ['GET', 'POST']
-    :param strict_slash: If not false, the rule url will end with slash
+    :param strict_slash: If not false, the rule URL will end with slash
     :param rule_suffix: The pss suffix, default is 'multi'
     :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
 
@@ -479,7 +479,7 @@ def register_models_query_route(app, models, rule, module=None, action=None, met
 
 def register_model_bulk_add_route(app, model, rule, module=None, action='add', methods=None, with_relationship=False, strict_slash=True, rule_suffix='bulk', endpoint=None):
     """
-    Register bulk add type URL rule for the specified model class to the application/blueprint.
+    Register a URL rule for bulk adding data for the specified model class on the application/blueprint.
 
     .. versionadded:: 1.8
     .. versionupdated::
@@ -489,13 +489,13 @@ def register_model_bulk_add_route(app, model, rule, module=None, action='add', m
         register_model_bulk_add_route(api_blueprint, User, 'users', 'users')
 
     :param app: Flask application / Blueprints instance
-    :param model: The DB model class, ex)User
-    :param rule: The URL rule string, ex)/users
-    :param module: The module name for permission check, ex)users
-    :param action: The action of the module for permission check, ex)add
+    :param model: The DB model class, e.g. ``User``
+    :param rule: The URL rule string, e.g. ``users``
+    :param module: The module name for permission check, e.g. ``users``
+    :param action: The action of the module for permission check, e.g. ``add``
     :param methods: The methods of the route, default is ['POST']
     :param with_relationship: If True, the relationship data will be added in bulk, default is False
-    :param strict_slash: If not False, the rule url will end with slash
+    :param strict_slash: If not False, the rule URL will end with slash
     :param rule_suffix: The upsert suffix, default is 'bulk-add'
     :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     :return:
@@ -509,12 +509,8 @@ def register_model_bulk_add_route(app, model, rule, module=None, action='add', m
     def bulk_add():
         request_json = get_request_json({})  # @2026-08-11, request.json --> get_request_json({})
         req_log_data = json.dumps(request_json)
-        try:
-            model.bulk_add(request_json, with_relationship=with_relationship)
-            success, res_data = True, request_json
-        except Exception as e:
-            flaskz_logger.exception(e)
-            success, res_data = False, res_status_codes.db_add_err
+
+        success, res_data = model.bulk_add(request_json, with_relationship=with_relationship)
 
         res_log_data = get_log_data(res_data)
         log_operation(module, 'add', success, req_log_data, res_log_data)
@@ -525,7 +521,7 @@ def register_model_bulk_add_route(app, model, rule, module=None, action='add', m
 
 def register_model_bulk_delete_route(app, model, rule, module=None, action='delete', methods=None, strict_slash=True, rule_suffix='bulk', endpoint=None):
     """
-    Register bulk delete type URL rule for the specified model class to the application/blueprint.
+    Register a URL rule for bulk deleting data for the specified model class on the application/blueprint.
 
     .. versionadded:: 1.8
 
@@ -533,12 +529,12 @@ def register_model_bulk_delete_route(app, model, rule, module=None, action='dele
         register_model_bulk_delete_route(api_blueprint, User, 'users', 'users')
 
     :param app: Flask application / Blueprints instance
-    :param model: The DB model class, ex)User
-    :param rule: The URL rule string, ex)/users
-    :param module: The module name for permission check, ex)users
-    :param action: The action of the module for permission check, ex)delete
+    :param model: The DB model class, e.g. ``User``
+    :param rule: The URL rule string, e.g. ``users``
+    :param module: The module name for permission check, e.g. ``users``
+    :param action: The action of the module for permission check, e.g. ``delete``
     :param methods: The methods of the route, default is ['DELETE']
-    :param strict_slash: If not false, the rule url will end with slash
+    :param strict_slash: If not false, the rule URL will end with slash
     :param rule_suffix: The upsert suffix, default is 'bulk-delete'
     :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     :return:
@@ -560,11 +556,8 @@ def register_model_bulk_delete_route(app, model, rule, module=None, action='dele
                 ids = request_json.get('ids') or request_json.get('id', [])
         else:
             ids = ids.split(',')
-        try:
-            success, res_data = True, model.bulk_delete(ids)
-        except Exception as e:
-            flaskz_logger.exception(e)
-            success, res_data = False, res_status_codes.db_delete_err
+
+        success, res_data = model.bulk_delete(ids) # @2026-09-03, change
 
         res_log_data = get_log_data(res_data)
         log_operation(module, 'delete', success, req_log_data, res_log_data)
@@ -575,7 +568,7 @@ def register_model_bulk_delete_route(app, model, rule, module=None, action='dele
 
 def register_model_bulk_update_route(app, model, rule, module=None, action='update', methods=None, with_relationship=False, strict_slash=True, rule_suffix='bulk', endpoint=None):
     """
-    Register bulk update type URL rule for the specified model class to the application/blueprint.
+    Register a URL rule for bulk updating data for the specified model class on the application/blueprint.
 
     .. versionadded:: 1.8
     .. versionupdated::
@@ -585,13 +578,13 @@ def register_model_bulk_update_route(app, model, rule, module=None, action='upda
         register_model_bulk_update_route(api_blueprint, User, 'users', 'users')
 
     :param app: Flask application / Blueprints instance
-    :param model: The DB model class, ex)User
-    :param rule: The URL rule string, ex)/users
-    :param module: The module name for permission check, ex)users
-    :param action: The action of the module for permission check, ex)update
+    :param model: The DB model class, e.g. ``User``
+    :param rule: The URL rule string, e.g. ``users``
+    :param module: The module name for permission check, e.g. ``users``
+    :param action: The action of the module for permission check, e.g. ``update``
     :param methods: The methods of the route, default is ['PATCH']
     :param with_relationship: If True, the relationship data will be updated in bulk, default is False
-    :param strict_slash: If not False, the rule url will end with slash
+    :param strict_slash: If not False, the rule URL will end with slash
     :param rule_suffix: The upsert suffix, default is 'bulk-update'
     :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     :return:
@@ -605,12 +598,8 @@ def register_model_bulk_update_route(app, model, rule, module=None, action='upda
     def bulk_update():
         request_json = get_request_json({})  # @2026-08-11, request.json --> get_request_json({})
         req_log_data = json.dumps(request_json)
-        try:
-            model.bulk_update(request_json, with_relationship=with_relationship)
-            success, res_data = True, request_json
-        except Exception as e:
-            flaskz_logger.exception(e)
-            success, res_data = False, res_status_codes.db_update_err
+
+        success, res_data = model.bulk_update(request_json, with_relationship=with_relationship)
 
         res_log_data = get_log_data(res_data)
         log_operation(module, 'update', success, req_log_data, res_log_data)

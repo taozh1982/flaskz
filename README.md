@@ -1,6 +1,6 @@
 ## 关于
 
-*Flaskz*是以*SQLAlchemy ORM*为核心、可选集成*Flask*的扩展工具集，适用于Web应用、脚本和后台任务等场景，可快速、灵活实现数据模型操作、条件查询、API生成和操作日志等功能。
+*Flaskz*是以*SQLAlchemy ORM*为核心、可选集成*Flask*的扩展工具集, 适用于Web应用、脚本和后台任务等场景, 可快速、灵活实现数据模型操作、条件查询、API生成和操作日志等功能
 
 ## 使用
 
@@ -13,8 +13,11 @@
 
 ## 版本
 
+- **1.9.0** `2026/10/01`
+    - [A] `ModelMixin`添加`before_bulk_*`和`after_bulk_*`回调方法，支持在批量操作执行前后进行自定义处理
+    - [C] `auth.jws`移除`itsdangerous`依赖
 - **1.8.6** `2026/09/01`
-    - [A] 将`Flask`和`requests`调整为可选依赖(按需安装)
+    - [C] 将`Flask`和`requests`调整为可选依赖(按需安装`pip install "flaskz[flask/ext/all]"`)
     - [A] `BaseModelMixin`添加`update_by`和`update_by_query`方法, 用于更新符合指定条件的数据
 - **1.8.3** `2026/01/01`
     - [A] 模型`Column.info`对象添加`cast_type`属性(类型/函数), 用于指定列在排序/过滤时的类型转换

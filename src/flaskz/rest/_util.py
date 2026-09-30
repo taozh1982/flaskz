@@ -16,6 +16,7 @@ def get_current_model_rest_manager_callback(callback_name):
         model_rest_manager = getattr(current_app, 'model_rest_manager', None)
         if model_rest_manager:
             return getattr(model_rest_manager, callback_name, None)
+    return None
 
 
 def rest_login_required():

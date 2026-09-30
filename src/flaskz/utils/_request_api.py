@@ -142,7 +142,7 @@ def request(url, method="GET", url_params=None, base_url="", raw_response=False,
         return True, result
     except Exception as e:
         result = str(e)
-        flaskz_logger.exception('Api request failed:\n' + result)
+        flaskz_logger.exception(f'Api request failed:\n{result}', exc_info=False)
 
     return False, result
 

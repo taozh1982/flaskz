@@ -1,51 +1,20 @@
-"""replace jws in itsdangerous"""
+"""itsdangerous jws code"""
 
 import hashlib
-import json as _json
 import time
-import typing as _t
 from datetime import datetime
 from datetime import timezone
 from decimal import Decimal
 from numbers import Real
 
-from itsdangerous.encoding import base64_decode
-from itsdangerous.encoding import base64_encode
-from itsdangerous.encoding import want_bytes
-from itsdangerous.exc import BadData
-from itsdangerous.exc import BadHeader
-from itsdangerous.exc import BadPayload
-from itsdangerous.exc import BadSignature
-from itsdangerous.exc import SignatureExpired
-from itsdangerous.serializer import Serializer
-from itsdangerous.signer import HMACAlgorithm
-from itsdangerous.signer import NoneAlgorithm
+from ._jws_compat import (BadData, BadHeader, BadPayload, BadSignature, HMACAlgorithm, NoneAlgorithm, Serializer, SignatureExpired, _CompactJSON, base64_decode, base64_encode,
+                          want_bytes)
 
 __all__ = ['JSONWebSignatureSerializer', 'TimedJSONWebSignatureSerializer']
 
 
-class _CompactJSON:
-    """Wrapper around json module that strips whitespace."""
-
-    @staticmethod
-    def loads(payload: _t.Union[str, bytes]) -> _t.Any:
-        return _json.loads(payload)
-
-    @staticmethod
-    def dumps(obj: _t.Any, **kwargs: _t.Any) -> str:
-        kwargs.setdefault("ensure_ascii", False)
-        kwargs.setdefault("separators", (",", ":"))
-        return _json.dumps(obj, **kwargs)
-
-
 class JSONWebSignatureSerializer(Serializer):
-    """This serializer implements JSON Web Signature (JWS) support. Only
-    supports the JWS Compact Serialization.
-
-    .. deprecated:: 2.0
-        Will be removed in ItsDangerous 2.1. Use a dedicated library
-        such as authlib.
-    """
+    """This serializer implements JSON Web Signature (JWS) support. Only supports the JWS Compact Serialization."""
 
     jws_algorithms = {
         "HS256": HMACAlgorithm(hashlib.sha256),
@@ -56,27 +25,10 @@ class JSONWebSignatureSerializer(Serializer):
 
     #: The default algorithm to use for signature generation
     default_algorithm = "HS512"
-
     default_serializer = _CompactJSON
 
-    def __init__(
-            self,
-            secret_key,
-            salt=None,
-            serializer=None,
-            serializer_kwargs=None,
-            signer=None,
-            signer_kwargs=None,
-            algorithm_name=None,
-    ):
-        super().__init__(
-            secret_key,
-            salt=salt,
-            serializer=serializer,
-            serializer_kwargs=serializer_kwargs,
-            signer=signer,
-            signer_kwargs=signer_kwargs,
-        )
+    def __init__(self, secret_key, salt=None, serializer=None, serializer_kwargs=None, signer=None, signer_kwargs=None, algorithm_name=None):
+        super().__init__(secret_key, salt=salt, serializer=serializer, serializer_kwargs=serializer_kwargs, signer=signer, signer_kwargs=signer_kwargs)
 
         if algorithm_name is None:
             algorithm_name = self.default_algorithm
@@ -95,26 +47,17 @@ class JSONWebSignatureSerializer(Serializer):
         try:
             json_header = base64_decode(base64d_header)
         except Exception as e:
-            raise BadHeader(
-                "Could not base64 decode the header because of an exception",
-                original_error=e,
-            )
+            raise BadHeader("Could not base64 decode the header because of an exception", original_error=e)
 
         try:
             json_payload = base64_decode(base64d_payload)
         except Exception as e:
-            raise BadPayload(
-                "Could not base64 decode the payload because of an exception",
-                original_error=e,
-            )
+            raise BadPayload("Could not base64 decode the payload because of an exception", original_error=e)
 
         try:
             header = super().load_payload(json_header, serializer=_CompactJSON)
         except BadData as e:
-            raise BadHeader(
-                "Could not unserialize header because it was malformed",
-                original_error=e,
-            )
+            raise BadHeader("Could not unserialize header because it was malformed", original_error=e)
 
         if not isinstance(header, dict):
             raise BadHeader("Header payload is not a JSON object", header=header)
@@ -127,12 +70,8 @@ class JSONWebSignatureSerializer(Serializer):
         return payload
 
     def dump_payload(self, header, obj):
-        base64d_header = base64_encode(
-            self.serializer.dumps(header, **self.serializer_kwargs)
-        )
-        base64d_payload = base64_encode(
-            self.serializer.dumps(obj, **self.serializer_kwargs)
-        )
+        base64d_header = base64_encode(self.serializer.dumps(header, **self.serializer_kwargs))
+        base64d_payload = base64_encode(self.serializer.dumps(obj, **self.serializer_kwargs))
         return base64d_header + b"." + base64d_payload
 
     def make_algorithm(self, algorithm_name):
@@ -150,13 +89,7 @@ class JSONWebSignatureSerializer(Serializer):
         if algorithm is None:
             algorithm = self.algorithm
 
-        return self.signer(
-            self.secret_keys,
-            salt=salt,
-            sep=".",
-            key_derivation=key_derivation,
-            algorithm=algorithm,
-        )
+        return self.signer(self.secret_keys, salt=salt, sep=".", key_derivation=key_derivation, algorithm=algorithm)
 
     def make_header(self, header_fields):
         header = header_fields.copy() if header_fields else {}
@@ -176,10 +109,7 @@ class JSONWebSignatureSerializer(Serializer):
         """Reverse of :meth:`dumps`. If requested via ``return_header``
         it will return a tuple of payload and header.
         """
-        payload, header = self.load_payload(
-            self.make_signer(salt, self.algorithm).unsign(want_bytes(s)),
-            return_header=True,
-        )
+        payload, header = self.load_payload(self.make_signer(salt, self.algorithm).unsign(want_bytes(s)), return_header=True)
 
         if header.get("alg") != self.algorithm_name:
             raise BadHeader("Algorithm mismatch", header=header, payload=payload)
@@ -195,13 +125,11 @@ class JSONWebSignatureSerializer(Serializer):
 
 
 class TimedJSONWebSignatureSerializer(JSONWebSignatureSerializer):
-    """Works like the regular :class:`JSONWebSignatureSerializer` but
-    also records the time of the signing and can be used to expire
-    signatures.
+    """
+    Works like the regular :class:`JSONWebSignatureSerializer` but also records the time of the signing and can be used to expire signatures.
 
-    JWS currently does not specify this behavior but it mentions a
-    possible extension like this in the spec. Expiry date is encoded
-    into the header similar to what's specified in `draft-ietf-oauth
+    JWS currently does not specify this behavior, but it mentions a possible extension like this in the spec.
+    Expiry date is encoded into the header similar to what's specified in `draft-ietf-oauth
     -json-web-token <http://self-issued.info/docs/draft-ietf-oauth-json
     -web-token.html#expDef>`_.
     """
@@ -234,18 +162,14 @@ class TimedJSONWebSignatureSerializer(JSONWebSignatureSerializer):
 
         try:
             header["exp"] = int(header["exp"])
-        except ValueError:
+        except (TypeError, ValueError):
             raise int_date_error
 
         if header["exp"] < 0:
             raise int_date_error
 
         if header["exp"] < self.now():
-            raise SignatureExpired(
-                "Signature expired",
-                payload=payload,
-                date_signed=self.get_issue_date(header),
-            )
+            raise SignatureExpired("Signature expired", payload=payload, date_signed=self.get_issue_date(header))
 
         if return_header:
             return payload, header
@@ -253,18 +177,14 @@ class TimedJSONWebSignatureSerializer(JSONWebSignatureSerializer):
         return payload
 
     def get_issue_date(self, header):
-        """If the header contains the ``iat`` field, return the date the
-        signature was issued, as a timezone-aware
-        :class:`datetime.datetime` in UTC.
-
-        .. versionchanged:: 2.0
-            The timestamp is returned as a timezone-aware ``datetime``
-            in UTC rather than a naive ``datetime`` assumed to be UTC.
+        """
+        If the header contains the ``iat`` field, return the date the signature was issued, as a timezone-aware :class:`datetime.datetime` in UTC.
         """
         rv = header.get("iat")
 
         if isinstance(rv, (Real, Decimal)):
             return datetime.fromtimestamp(int(rv), tz=timezone.utc)
+        return None
 
     def now(self):
         return int(time.time())

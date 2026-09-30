@@ -158,6 +158,7 @@ def query_from_g_cache(model_class, by_value, attr=None, to_dict=True, mapping_k
             else:
                 return getattr(item, attr, None)
         return item
+    return None
 
 
 def append_debug_queries(query):

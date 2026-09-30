@@ -56,7 +56,7 @@ def init_model(app):
         DBSession.configure(binds={ModelBase: engine}, **session_kwargs)  # for multiple db
 
         with engine.connect():  # connect test
-            flaskz_logger.info('Database ' + database_uri + ' is ready\n')
+            flaskz_logger.info(f'Database {database_uri} is ready')
 
         # handle disconnect error
         engine_err_info = {}
@@ -64,7 +64,7 @@ def init_model(app):
         @event.listens_for(engine, "handle_error")
         def handle_engine_error(context: ExceptionContext):  # @2023-02-01: add error handler
             original_exception = getattr(context, 'original_exception', None)
-            flaskz_logger.error('Engine error:\n' + str(original_exception))
+            flaskz_logger.error(f'Engine error:\n{original_exception}')
             if not isinstance(original_exception, OperationalError):  # @2023-08-25: add
                 return
             if engine_kwargs.get('pool_pre_ping') is not True:
@@ -76,7 +76,7 @@ def init_model(app):
                         engine.connect()  # reconnect
 
     except Exception:
-        flaskz_logger.exception('Connect to database ' + database_uri + ' error\n')
+        flaskz_logger.exception(f'Connect to database {database_uri} error')
         return
 
     if not _is_flask_app:
@@ -118,7 +118,7 @@ def init_model(app):
                 times = len(queries)
                 if times > 0:
                     if 0 < db_access_times < times:
-                        flaskz_logger.warning('Query Times:\n' + str(times))
+                        flaskz_logger.warning(f'Database query count:\n{times}')
 
                     if db_slow_time > 0:
                         slow_queries = []
@@ -126,7 +126,7 @@ def init_model(app):
                             if query.duration > db_slow_time:
                                 slow_queries.append('--Duration: %fms\n--Statement:%s\n--Parameters: %s' % (query.duration, query.statement, query.parameters))
                         if len(slow_queries) > 0:
-                            flaskz_logger.warning('Slow queries:\n' + ('\n'.join(slow_queries)))
+                            flaskz_logger.warning('Slow database queries:\n' + ('\n'.join(slow_queries)))
                 return response
 
 

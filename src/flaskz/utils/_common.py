@@ -1,6 +1,7 @@
 import json
-from collections.abc import Mapping
-from datetime import datetime, date, time
+import uuid
+from collections.abc import Hashable, Mapping
+from datetime import date, datetime, time
 from decimal import Decimal
 
 __all__ = [
@@ -245,7 +246,7 @@ def get_ins_mapping(ins_list: list, attr: str, deep=False):
 
 def get_dict_mapping(dict_list: list, key='id', key_join="+"):
     """
-    Create a dict map of the specified dict list withe the specified key
+    Create a dict map of the specified dict list with the specified key
 
     Example:
         get_dict_mapping([{'name': 'a'}, {'name': 'b'}, {'name': 'c'}], 'name')  # {'a':dict_a, 'b':dict_b, 'c':dict_c}
@@ -264,8 +265,10 @@ def get_dict_mapping(dict_list: list, key='id', key_join="+"):
                 kv.append(str(get_deep(item, k_item)))
             map_dict[key_join.join(kv)] = item
         else:
-            map_dict[get_deep(item, key)] = item
-
+            value = get_deep(item, key)
+            if not isinstance(value, Hashable):
+                raise TypeError(f"Mapping key must be hashable, got {type(value).__name__}: {value!r}")
+            map_dict[value] = item
     return map_dict
 
 
@@ -546,16 +549,18 @@ def json_dumps(obj, **kwargs):
     return json.dumps(obj, **kwargs)
 
 
-def _json_serializer(obj):
-    if isinstance(obj, (datetime, date, time)):
-        return obj.isoformat()
-    if isinstance(obj, (Decimal, bytes, bytearray)):
-        return str(obj)
-    if isinstance(obj, set):
-        return list(obj)
-    if hasattr(obj, '__dict__'):
-        return obj.__dict__
-    raise TypeError(f"Object of type '{obj.__class__.__name__}' is not JSON serializable")
+def _json_serializer(value):
+    if isinstance(value, (datetime, date, time)):
+        return value.isoformat()
+    if isinstance(value, (Decimal, bytes, bytearray)):
+        return str(value)
+    if isinstance(value, set):
+        return list(value)
+    if hasattr(value, '__dict__'):
+        return value.__dict__
+    if isinstance(value, uuid.UUID):
+        return str(value)
+    raise TypeError(f"Object of type '{value.__class__.__name__}' is not JSON serializable")
 
 
 # -------------------------------------------private-------------------------------------------

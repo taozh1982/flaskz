@@ -79,6 +79,65 @@ class ModelMixin(BaseModelMixin):
 
         return _op_result(before_result, instance)
 
+    @classmethod
+    def before_bulk_add(cls, items):
+        """
+        The callback before bulk adding data.
+        If the return value is not True, the bulk add operation will be terminated and the result will be returned to the client.
+
+        .. versionadded:: 1.9.0
+
+        :param items: The data list to be added
+        :return: True|Error Message
+        """
+        return True
+
+    @classmethod
+    def after_bulk_add(cls, items, success, result, before_result):
+        """
+        The callback after bulk adding data.
+        If an exception occurs in after_bulk_add, the added data will not be rolled back.
+
+        .. versionadded:: 1.9.0
+
+        :param items: The data list to be added
+        :param success: Whether the bulk add operation was successful.
+        :param result: The result of the bulk add operation.
+        :param before_result: The result of the before_bulk_add callback
+        :return:
+        """
+        pass
+
+    @classmethod
+    def bulk_add(cls, items, with_relationship=False):
+        """
+        Perform a bulk add of the given list of mapping dictionaries.
+        Returns a tuple.
+            --the first value represents whether the bulk add operation was successful, True/False.
+            --the second value represents the result of the bulk add operation, reason/items. :param items: The data list to be added :param with_relationship: Whether to add relationship data
+
+        .. versionadded:: 1.9.0
+
+        :param items: The data list to be added
+        :param with_relationship: Whether to add relationship data
+        :return:
+        """
+        result = None
+        try:
+            before_result = cls.before_bulk_add(items)
+            success = False
+            try:
+                if before_result is True:
+                    result = super().bulk_add(items, with_relationship=with_relationship)
+                    success = True
+            finally:
+                cls.after_bulk_add(items, success, result, before_result)
+        except Exception as e:
+            flaskz_logger.exception(e)
+            return False, res_status_codes.db_add_err
+
+        return _bulk_op_result(before_result, items)
+
     # -------------------------------------------update-------------------------------------------
     @classmethod
     def get_update_data(cls, data):
@@ -148,6 +207,67 @@ class ModelMixin(BaseModelMixin):
 
         return _op_result(before_result, instance)
 
+    @classmethod
+    def before_bulk_update(cls, items):
+        """
+        The callback before bulk updating data.
+        If the return value is not True, the bulk update operation will be terminated
+        and the result will be returned to the client.
+
+        .. versionadded:: 1.9.0
+
+        :param items: The data list to be updated
+        :return: True|Error Message
+        """
+        return True
+
+    @classmethod
+    def after_bulk_update(cls, items, success, result, before_result):
+        """
+        The callback after bulk updating data.
+        If an exception occurs in after_bulk_update, the updated data will not be rolled back.
+
+        .. versionadded:: 1.9.0
+
+        :param items: The data list to be updated
+        :param success: Whether the bulk update operation was successful.
+        :param result: The result of the bulk update operation.
+        :param before_result: The result of the before_bulk_update callback
+        :return:
+        """
+        pass
+
+    @classmethod
+    def bulk_update(cls, items, with_relationship=False):
+        """
+        Perform a bulk update of the given list of mapping dictionaries.
+        Returns a tuple.
+           --the first value represents whether the bulk update operation was successful, True/False.
+           --the second value represents the result of the bulk update operation, reason/items.
+
+        .. versionadded:: 1.9.0
+
+        :param items: The data list to be updated
+        :param with_relationship: Whether to update relationship data
+
+        :return:
+        """
+        result = None
+        try:
+            success = False
+            before_result = cls.before_bulk_update(items)
+            try:
+                if before_result is True:
+                    result = super().bulk_update(items, with_relationship=with_relationship)
+                    success = True
+            finally:
+                cls.after_bulk_update(items, success, result, before_result)
+        except Exception as e:
+            flaskz_logger.exception(e)
+            return False, res_status_codes.db_update_err
+
+        return _bulk_op_result(before_result, items)
+
     # -------------------------------------------delete-------------------------------------------
     @classmethod
     def get_delete_data(cls, pk_value):
@@ -187,7 +307,8 @@ class ModelMixin(BaseModelMixin):
     @classmethod
     def delete(cls, pk_value):
         """
-        Delete the data from the db.
+        Delete the specified data with the specified primary key value.
+
         Returns a tuple.
            --the first value represents whether the delete operation was successful, True/False.
            --the second value represent the result of the delete operation, reason/instance.
@@ -223,6 +344,76 @@ class ModelMixin(BaseModelMixin):
             return False, res_status_codes.db_delete_err
 
         return _op_result(before_result, instance)
+
+    @classmethod
+    def before_bulk_delete(cls, items):
+        """
+        The callback before bulk deleting data.
+        Return ``True`` to continue the bulk delete operation, or ``(True, data)`` to continue and pass additional data to the ``after_bulk_delete`` callback.
+        Any other return value will terminate the bulk delete operation and be returned to the client.
+
+        .. versionadded:: 1.9.0
+
+        :param items: The data list to be deleted
+        :return: True | (True, data) | Error Message
+        """
+        return True
+
+    @classmethod
+    def after_bulk_delete(cls, items, success, result, before_result):
+        """
+        The callback after bulk deleting data.
+        If an exception occurs in after_bulk_delete, the deleted data will not be rolled back.
+
+        .. versionadded:: 1.9.0
+
+        :param items: The data list to be deleted
+        :param success: Whether the bulk delete operation was successful.
+        :param result: The deleted count, None if bulk_delete fails.
+        :param before_result: The result of the before_bulk_delete callback
+        :return:
+        """
+        pass
+
+    @classmethod
+    def bulk_delete(cls, items):
+        """
+        Perform a bulk delete of the given list of primary keys or mapping dictionaries.(atomic)
+        Returns a tuple.
+           --the first value represents whether the bulk delete operation was successful, True/False.
+           --the second value represents the result of the bulk delete operation, reason/deleted count.
+
+        .. versionadded:: 1.9.0
+
+        Example:
+            User.bulk_delete([1,2,3])   # pk list
+            User.bulk_delete([{'id': 1}, {'id': 2}, {'id': 3}]) # dict list
+
+        :param items: The primary key or condition list to be deleted
+        :return:
+        """
+        result = None
+        try:
+            before_result = cls.before_bulk_delete(items)
+            before_data = before_result
+            if type(before_result) is tuple and len(before_result) == 2 and type(before_result[0]) is bool:
+                before_result, before_data = before_result
+
+            success = False
+            try:
+                if before_result is True:
+                    result = super().bulk_delete(items)
+                    success = True
+            finally:
+                cls.after_bulk_delete(items, success, result, before_data)
+        except IntegrityError as e:
+            flaskz_logger.exception(e)
+            return False, res_status_codes.db_data_in_use
+        except Exception as e:
+            flaskz_logger.exception(e)
+            return False, res_status_codes.db_delete_err
+
+        return _bulk_op_result(before_result, result)
 
     # -------------------------------------------query-------------------------------------------
     @classmethod
@@ -306,3 +497,9 @@ def _op_result(before_result, instance):
     if not is_model_mixin_instance(instance):
         return False, instance
     return True, instance
+
+
+def _bulk_op_result(before_result, result):
+    if before_result is not True:
+        return False, before_result
+    return True, result

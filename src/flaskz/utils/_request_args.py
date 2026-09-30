@@ -13,6 +13,7 @@ def get_remote_addr():
     """
     if request:
         return request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
+    return None
 
 
 def is_ajax():
