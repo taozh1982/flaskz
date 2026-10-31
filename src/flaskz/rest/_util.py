@@ -1,8 +1,7 @@
 from functools import wraps
 
 from .._compat.flask import current_app
-
-from ..utils import get_wrap_str, filter_list
+from ..utils import filter_list, get_wrap_str
 
 __all__ = ['get_current_model_rest_manager_callback',
            'rest_login_required', 'rest_permission_required',

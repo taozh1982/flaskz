@@ -1,6 +1,9 @@
+import json
 import warnings
 
-from .._compat.flask import request
+from .. import consts
+from .._compat.flask import has_request_context as has_flask_request_context, request
+from ..app import get_context_value
 
 __all__ = ['get_remote_addr', 'is_ajax', 'get_request_json', 'get_pss']
 
@@ -27,7 +30,25 @@ def is_ajax():
     return False
 
 
-def get_request_json(*args):
+def get_request_json(default):
+    if has_flask_request_context():
+        return get_flaskz_request_json(default)
+
+    context_key = consts.FLASKZ_APP_REQUEST_CONTEXT_KEY
+    data = get_context_value('_flaskz_app_request_json_$_', context_key=context_key)
+    if data is None:
+        return default
+
+    if isinstance(data, (str, bytes)):
+        try:
+            data = json.loads(data)
+        except Exception:
+            return default
+
+    return data
+
+
+def get_flaskz_request_json(*args):
     """
     Get the JSON data(parsed) in request.
     If json does not exist or parsing json error, return {}

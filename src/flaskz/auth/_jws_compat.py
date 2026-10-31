@@ -6,6 +6,8 @@ import hmac
 import json
 import string
 
+from .._compat.flask import ItsSignatureExpired
+
 
 class _CompactJSON:
     @staticmethod
@@ -37,7 +39,8 @@ class BadTimeSignature(BadSignature):
         self.date_signed = date_signed
 
 
-class SignatureExpired(BadTimeSignature):
+# For backward compatibility with itsdangerous.SignatureExpired.
+class SignatureExpired(BadTimeSignature, ItsSignatureExpired):
     pass
 
 

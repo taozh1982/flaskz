@@ -221,7 +221,7 @@ def get_ins_mapping(ins_list: list, attr: str, deep=False):
     Create a dict map of the specified object list with the specified attribute
 
     Example:
-        get_ins_mapping([User(name='a'), User(name='b', User(name='c')], 'name')  # {'a':user_c, 'b':user_b, 'c':user_c}
+        get_ins_mapping([User(name='a'), User(name='b', User(name='c')], 'name') # {'a':user_c, 'b':user_b, 'c':user_c}
 
     :param ins_list:
     :param attr:

@@ -2,12 +2,12 @@ import sqlite3
 import time
 from datetime import datetime
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, make_url
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine import ExceptionContext
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+# from sqlalchemy.ext.declarative import declarative_base # -> sqlalchemy.orm
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 from .._compat.flask import is_flask_app
 
@@ -24,22 +24,21 @@ def init_model(app):
         init_model(flask_app)
 
     """
-    _is_flask_app = is_flask_app(app)
     app_config = get_app_config_items(app) or {}
-    database_uri = app_config.get('FLASKZ_DATABASE_URI')
+    database_uri = app_config.get('FLASKZ_DATABASE_URI') or ''
+    if not database_uri:
+        flaskz_logger.info(f'Database uri is ready')
 
-    # enable sqlite foreign key
-    # if database_uri.startswith('sqlite'):
-    @event.listens_for(Engine, "connect")
-    def set_sqlite_pragma(dbapi_connection, connection_record):
-        cursor = dbapi_connection.cursor()
-        if isinstance(cursor, sqlite3.Cursor):  # for multiple db connect
-            cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
+    _init_sqlite_model()
+
+    url = make_url(database_uri)  # @2026-10-05添加
+    safe_database_uri = url.render_as_string(hide_password=True)
+    if url.username:
+        safe_database_uri = safe_database_uri.replace(url.username, '***', 1)
 
     try:
         engine_kwargs = {}
-        custom_engine_kwargs = app_config.get('FLASKZ_DATABASE_ENGINE_KWARGS')  # @2023-02-27: add FLASKZ_DATABASE_ENGINE_KWARGS config
+        custom_engine_kwargs = app_config.get('FLASKZ_DATABASE_ENGINE_KWARGS') or {}  # @2023-02-27: add FLASKZ_DATABASE_ENGINE_KWARGS config
         if type(custom_engine_kwargs) is dict:
             engine_kwargs.update(custom_engine_kwargs)
 
@@ -56,7 +55,7 @@ def init_model(app):
         DBSession.configure(binds={ModelBase: engine}, **session_kwargs)  # for multiple db
 
         with engine.connect():  # connect test
-            flaskz_logger.info(f'Database {database_uri} is ready')
+            flaskz_logger.info(f'Database {safe_database_uri} is ready')
 
         # handle disconnect error
         engine_err_info = {}
@@ -76,12 +75,25 @@ def init_model(app):
                         engine.connect()  # reconnect
 
     except Exception:
-        flaskz_logger.exception(f'Connect to database {database_uri} error')
+        flaskz_logger.exception(f'Connect to database {safe_database_uri} error')
         return
 
-    if not _is_flask_app:
-        return
+    if is_flask_app(app):
+        _init_flask_app_model(app, app_config)
 
+
+def _init_sqlite_model():
+    # enable sqlite foreign key
+    # if database_uri.startswith('sqlite'):
+    @event.listens_for(Engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        if isinstance(cursor, sqlite3.Cursor):  # for multiple db connect
+            cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+
+def _init_flask_app_model(app, app_config):
     @app.teardown_appcontext
     def teardown_db(exception):
         """
@@ -100,14 +112,14 @@ def init_model(app):
         def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
             end_time = time.perf_counter()
             start_time = conn.info['_query_start_time'].pop(-1)
-            append_debug_queries(Attribute(**{
+            append_debug_queries({
                 'start_time': start_time,
                 'end_time': end_time,
                 'duration': (end_time - start_time) * 1000,  # ms
                 'statement': statement,
                 'parameters': parameters,
                 'context': context,
-            }))
+            })
 
         db_slow_time = app_config.get('FLASKZ_DATABASE_DEBUG_SLOW_TIME', -1)  # set config['FLASKZ_DATABASE_DEBUG_SLOW_TIME'] to enable
         db_access_times = app_config.get('FLASKZ_DATABASE_DEBUG_ACCESS_TIMES', -1)  # set config['FLASKZ_DATABASE_DEBUG_ACCESS_TIMES'] to enable
@@ -123,10 +135,11 @@ def init_model(app):
                     if db_slow_time > 0:
                         slow_queries = []
                         for query in queries:
-                            if query.duration > db_slow_time:
-                                slow_queries.append('--Duration: %fms\n--Statement:%s\n--Parameters: %s' % (query.duration, query.statement, query.parameters))
-                        if len(slow_queries) > 0:
-                            flaskz_logger.warning('Slow database queries:\n' + ('\n'.join(slow_queries)))
+                            duration = query.get('duration') or 0
+                            if duration > db_slow_time:
+                                slow_queries.append('--Duration: %fms\n--Statement: %s\n--Parameters: %s' % (duration, query.get('statement'), query.get('parameters')))
+                        if slow_queries:
+                            flaskz_logger.warning('Slow database queries:\n' + '\n'.join(slow_queries))
                 return response
 
 
@@ -134,6 +147,5 @@ from ._base import *
 from ._model import *
 from ._util import *
 from ._query_util import *
-from ..utils._cls import Attribute
 from ..utils._app import get_app_config_items
 from ..log import flaskz_logger

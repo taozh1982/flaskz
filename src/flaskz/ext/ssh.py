@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Optional, Tuple, Union
 
 import paramiko
-from paramiko.ssh_exception import SSHException, AuthenticationException
+from paramiko.ssh_exception import AuthenticationException, SSHException
 
 
 @contextmanager
@@ -31,8 +31,10 @@ def ssh_session(hostname: str, username: str, password: str = None, port: Option
             ssh.run_command_list(['enable', 'show run'])
     """
     ssh_client = SSH(hostname=hostname, username=username, password=password, port=port, **kwargs)
-    yield ssh_client
-    ssh_client.close()
+    try:
+        yield ssh_client
+    finally:
+        ssh_client.close()
 
 
 def ssh_run_command(connect_kwargs: dict, command: Union[str, list], run_kwargs: Optional[dict] = None) -> Tuple[bool, str]:
@@ -62,12 +64,12 @@ def ssh_run_command(connect_kwargs: dict, command: Union[str, list], run_kwargs:
                 'prompt': False,  # disable prompt
             })
 
-    :param connect_kwargs: the connect kwargs, ex) {'hostname': hostname, 'username': username, 'password': password, 'timeout': 10}
-    :param command: the specified command, ex) ls -l
-    :param run_kwargs: the run command kwargs, ex) {'recv': False, 'prompt': False}
+    :param connect_kwargs: The connection kwargs, e.g. ``{'hostname': hostname, 'username': username, 'password': password, 'timeout': 10}``
+    :param command: The specified command, e.g. ``ls -l``
+    :param run_kwargs: The run command kwargs, e.g. ``{'recv': False, 'prompt': False}``
     :return: (success, result_or_err)
     """
-    connect_kwargs = connect_kwargs or {}
+    connect_kwargs = dict(connect_kwargs or {})
     run_kwargs = run_kwargs or {}
     retries = connect_kwargs.pop('retries', None)
     if type(retries) is not int:  # @2025-01-12 add
@@ -116,13 +118,13 @@ def ssh_run_command_list(connect_kwargs: dict, command_list: list, run_kwargs: O
                 'prompt': False,  # disable prompt
             })
 
-    :param connect_kwargs: the connect kwargs, ex) {'hostname': hostname, 'username': username, 'password': password, 'timeout': 10}
-    :param command_list: the command list, ex) ['terminal length 0', 'show version', 'show running-config']
-    :param run_kwargs: the run command kwargs, ex) {'recv': False, 'prompt': False}
+    :param connect_kwargs: The connection kwargs, e.g. ``{'hostname': hostname, 'username': username, 'password': password, 'timeout': 10}``
+    :param command_list: The command list, e.g. `['terminal length 0', 'show version', 'show running-config']`
+    :param run_kwargs: The run command kwargs, e.g. `{'recv': False, 'prompt': False}`
 
     :return: (success, result_or_err)
     """
-    connect_kwargs = connect_kwargs or {}
+    connect_kwargs = dict(connect_kwargs or {})
     run_kwargs = run_kwargs or {}
     retries = connect_kwargs.pop('retries', None)
     if type(retries) is not int:  # @2025-01-12 add
@@ -144,7 +146,7 @@ def ssh_run_command_list(connect_kwargs: dict, command_list: list, run_kwargs: O
 class SSH(object):
     def __init__(self, hostname, username, password=None, port=22, **kwargs):
         """
-        Create a SSH instance.
+        Create an SSH instance.
 
         .. versionupdated::
             1.6   - add secondary_password and recv_endswith kwargs
@@ -170,10 +172,10 @@ class SSH(object):
             ssh.run_command_list(['enable', 'show run'], last_result=True) # return last command output
             ssh.run_command_list(['show version', 'show clock', 'show running-config'])
 
-        :param hostname: the host(address) to ssh
-        :param username: the username of the host
-        :param password: the password of the host
-        :param port: the ssh port, default is 22
+        :param hostname: The host(address) to ssh
+        :param username: The username of the host
+        :param password: The password of the host
+        :param port: The ssh port, default is 22
         :param kwargs:
                 - secondary_password: use for enable/sudo action, if None, the password needs to be sent through the command
                 - recv_endswith: use for stop receiving, default is ['# ', '$ ', ': ', '? ']
@@ -203,23 +205,36 @@ class SSH(object):
         if type(pre_commands) is list and len(pre_commands) > 0:
             self._pre_commands = pre_commands
 
-        # self.transport = paramiko.Transport((hostname, port))
-        self.transport = paramiko.Transport(_create_socket(hostname=hostname, port=port, timeout=self._timeout))
-        _connect_kwargs = kwargs.pop('connect_kwargs', None) or {}  # kwargs for Transport.connect()
-        self.transport.connect(username=username, password=password, **_connect_kwargs)
-        if self.transport.is_authenticated() is not True:  # @2023-12-28 add(Oops, unhandled type 3 ('unimplemented'))
-            raise AuthenticationException('Authentication failed.')
-
+        # Channel configuration
         self._channel_kwargs = {'width': 100000, 'height': 100000}
-        self._channel_kwargs.update(kwargs.pop('channel_kwargs', {}))
-        if 'timeout' in self._channel_kwargs:
-            self._channel_timeout = self._channel_kwargs.pop('timeout', 0)
-        else:
+        self._channel_kwargs.update(kwargs.pop('channel_kwargs', None) or {})
+        self._channel_timeout = self._channel_kwargs.pop('timeout', self._timeout)
+        if self._channel_timeout is None:
             self._channel_timeout = self._timeout
+        # Initialize SSH Transport
+        _connect_kwargs = kwargs.pop('connect_kwargs', None) or {}  # kwargs for Transport.connect()
+        self._init_transport(hostname, port, username, password, timeout=self._timeout, connect_kwargs=_connect_kwargs)
 
         self.ssh = paramiko.SSHClient()
         self.ssh._transport = self.transport
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    def _init_transport(self, hostname, port, username, password=None, timeout=10, connect_kwargs=None):
+        """Create and connect SSH Transport."""
+        sock = _create_socket(hostname, port, timeout)
+        transport = None
+        try:
+            transport = paramiko.Transport(sock)
+            transport.connect(username=username, password=password, **(connect_kwargs or {}))
+            if transport.is_authenticated() is not True:  # @2023-12-28 add(Oops, unhandled type 3 ('unimplemented'))
+                raise AuthenticationException('Authentication failed.')
+            self.transport = transport
+        except Exception:
+            if transport is not None:
+                transport.close()
+            else:
+                sock.close()
+            raise
 
     @property
     def channel(self):
@@ -247,12 +262,12 @@ class SSH(object):
                 'clean': False,
             })
 
-         :param command: the command to run.
-         :param recv: wait for the result or not.
-         :param clean: clean output info or not, default True(clean)
-         :param prompt: the prompt of the command line
+         :param command: The command to run.
+         :param recv: Whether to wait for the result.
+         :param clean: Whether to clean the output, default True(clean)
+         :param prompt: The prompt of the command line
 
-         :return: the output of the command
+         :return: The output of the command
         """
 
         if self._pre_commands_run is False and self._pre_commands:
@@ -306,10 +321,10 @@ class SSH(object):
                       '11111111'
                       ], True)
 
-         :param command_list: the command list to run.
-         :param last_result: if True, return the result of the last command, otherwise, return the result list
+         :param command_list: The command list to run.
+         :param last_result: If True, return the result of the last command, otherwise, return the result list
 
-         :return: command output result(list/last)
+         :return: The output of the command list(list/last)
         """
         re_list = []
         prompt = kwargs.get('prompt', None)  # @2024-03-26 kwargs.get('kwargs', None) --> kwargs.get('prompt', None)
@@ -343,9 +358,15 @@ class SSH(object):
         return output[newline_pos + 1:].lstrip('\r\n') if newline_pos != -1 else output
 
     def close(self):
-        """Close the connect"""
-        self.channel.close()
-        self.ssh.close()
+        """Close SSH connection"""
+        try:
+            if hasattr(self, '_sftp'):
+                self._sftp.close()
+        finally:
+            if hasattr(self, 'ssh'):
+                self.ssh.close()  # close transport
+            elif hasattr(self, 'transport'):
+                self.transport.close()  # close channel
 
     @property
     def sftp(self):
@@ -504,23 +525,23 @@ def _create_socket(hostname, port, timeout=0):
 
     reason = 'No suitable address family'
     addrinfos = socket.getaddrinfo(hostname, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+
     for family, socktype, proto, canonname, sockaddr in addrinfos:
-        if socktype == socket.SOCK_STREAM:
-            sock = socket.socket(family, socket.SOCK_STREAM)
+        if socktype != socket.SOCK_STREAM:
+            continue
+
+        sock = socket.socket(family, socktype, proto)
+        try:
             if timeout > 0:
                 sock.settimeout(timeout)
-            try:
-                # retry_on_signal(lambda: sock.connect((hostname, port))) # @2023-06-09 change, remove paramiko.util.retry_on_signal(Paramiko3.0.0 2023-01-20)
-                sock.connect((hostname, port))
-            except socket.error as e:
-                reason = str(e)
-            else:
-                break
-    else:
-        raise SSHException(
-            'Unable to connect to {}: {}'.format(hostname, reason)
-        )
-    return sock
+            # retry_on_signal(lambda: sock.connect((hostname, port))) # @2023-06-09 change, remove paramiko.util.retry_on_signal(Paramiko3.0.0 2023-01-20)
+            sock.connect(sockaddr)
+            return sock
+        except OSError as e:
+            reason = str(e)
+            sock.close()
+
+    raise SSHException(f'Unable to connect to {hostname}: {reason}')
 
 
 def _get_command_arg(command, recv, clean):

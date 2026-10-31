@@ -10,9 +10,17 @@
 4. [☞常用函数](http://zhangyiheng.com/blog/articles/py_flaskz_utils.html)
 5. [☞基于Flaskz的管理系统开发模板 Flaskz-admin](http://zhangyiheng.com/blog/articles/py_flaskz_admin.html)
 6. [☞使用手册](http://zhangyiheng.com/blog/articles/py_flaskz_manual.html)
+7. [☞运行上下文管理](http://zhangyiheng.com/blog/articles/py_flaskz_context.html)
 
 ## 版本
 
+- **1.9.1** `2026/11/01`
+    - [A] 添加Context运行上下文管理✨
+        - 支持上下文嵌套、命名访问及数据共享与隔离
+        - 支持注册清理回调，在上下文结束时自动释放资源
+        - 支持按上下文开启数据库会话缓存
+    - [F] 修复数据库查询运算符的SQL注入问题，改用运算符白名单
+    - [A] 扩展查询运算符，新增范围取反、字符串匹配及NULL安全比较支持
 - **1.9.0** `2026/10/01`
     - [A] `ModelMixin`添加`before_bulk_*`和`after_bulk_*`回调方法，支持在批量操作执行前后进行自定义处理
     - [C] `auth.jws`移除`itsdangerous`依赖

@@ -8,6 +8,7 @@ except ImportError:
     current_app = None
     g = None
     request = None
+
     FLASK_AVAILABLE = False
 
 
@@ -21,3 +22,10 @@ except ImportError:
 
 def is_flask_app(app):
     return FLASK_AVAILABLE and Flask is not None and isinstance(app, Flask)
+
+
+# itsdangerous 可选依赖
+try:
+    from itsdangerous.exc import SignatureExpired as ItsSignatureExpired
+except ImportError:
+    ItsSignatureExpired = Exception

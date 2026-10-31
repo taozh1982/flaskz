@@ -1,6 +1,6 @@
 import types
 
-from sqlalchemy import desc, asc, Column, and_, or_, cast
+from sqlalchemy import Column, and_, asc, cast, desc, or_
 from sqlalchemy.sql.elements import UnaryExpression
 from sqlalchemy.types import TypeEngine
 
@@ -161,7 +161,7 @@ def _parse_relationships_search_filters(cls, pss_payload, pss_options, parse_opt
     # @2023-12-05 add
     relationships = cls.get_relationships()
     relationships_filters = {}
-    search = pss_payload.get('search') or {}
+    search = pss_payload.get('search') or pss_payload.get('query') or {}
 
     relationships_search = {}  # Role:{'name':'admin'}
     for key, value in search.items():  # "role.name":"admin"
@@ -257,26 +257,78 @@ def get_col_op(column, operator, value):
 
         ~startswith , endswith , contains~
     """
-    operator = operator.lower()
+    if not isinstance(operator, str):
+        raise ValueError('Query operator must be a string')
+    operator = ' '.join(operator.lower().split())
+    # Normalize aliases.
+    op_alias_mapping = {
+        '=': '==',
+        '<>': '!=',
+
+        'not in': 'notin', 'not_in': 'notin',
+
+        'not between': 'notbetween', 'not_between': 'notbetween',
+
+        'is not': 'isnot', 'is_not': 'isnot',
+
+        'not like': 'notlike', 'not_like': 'notlike',
+        'not ilike': 'notilike', 'not_ilike': 'notilike',
+
+        'not startswith': 'notstartswith', 'not_startswith': 'notstartswith',
+        'not endswith': 'notendswith', 'not_endswith': 'notendswith',
+        'not contains': 'notcontains', 'not_contains': 'notcontains',
+
+        'is distinct from': 'is_distinct_from',
+        'is not distinct from': 'is_not_distinct_from', 'isnot_distinct_from': 'is_not_distinct_from',
+    }
+    operator = op_alias_mapping.get(operator, operator)
+
     op_func_mapping = {
+        # Comparison
+        '==': lambda col, val: col.__eq__(val),
+        '!=': lambda col, val: col.__ne__(val),
+        '>': lambda col, val: col.__gt__(val),
+        '>=': lambda col, val: col.__ge__(val),
+        '<': lambda col, val: col.__lt__(val),
+        '<=': lambda col, val: col.__le__(val),
+
+        # Membership
         'in': lambda col, val: col.in_(val) if type(val) is list else None,
         'notin': lambda col, val: col.notin_(val) if type(val) is list else None,
-        'between': lambda col, val: col.between(*val) if type(val) is list else None,
 
+        # Range
+        'between': lambda col, val: col.between(*val),
+        'notbetween': lambda col, val: ~col.between(*val),
+
+        # Identity / NULL
         'is': lambda col, val: col.is_(val),
         'isnot': lambda col, val: col.is_not(val),
 
+        # Pattern matching
         'like': lambda col, val: col.like(val),
         'ilike': lambda col, val: col.ilike(val),
         'notlike': lambda col, val: col.notlike(val),
         'notilike': lambda col, val: col.notilike(val),
 
-        '==': lambda col, val: col.__eq__(val)
+        # NULL-safe comparison
+        'is_distinct_from': lambda col, val: col.is_distinct_from(val),
+        'is_not_distinct_from': lambda col, val: col.is_not_distinct_from(val),
+
+        # Literal string matching
+        'startswith': lambda col, val: col.startswith(val, autoescape=True),
+        'notstartswith': lambda col, val: ~col.startswith(val, autoescape=True),
+        'endswith': lambda col, val: col.endswith(val, autoescape=True),
+        'notendswith': lambda col, val: ~col.endswith(val, autoescape=True),
+        'contains': lambda col, val: col.contains(val, autoescape=True),
+        'notcontains': lambda col, val: ~col.contains(val, autoescape=True),
     }
+
+    op_func = op_func_mapping.get(operator)
+    if op_func is None:  # 2026-10-15 change
+        raise ValueError('Unsupported query operator')
+
     value = _get_operator_value(operator, value)  # 2024-04-07 add
-    if operator in op_func_mapping:
-        return op_func_mapping.get(operator)(column, value)
-    return column.op(operator)(value)
+    return op_func(column, value)
 
 
 def _get_parse_options(cls, pss_payload):
@@ -390,6 +442,26 @@ def _merge_search_filter_likes(pss_options, parse_option):
 
 
 def _get_operator_value(operator, value):
+    """Validate and normalize the value of a canonical query operator."""
+
+    # Validate collection values.
+    if operator in ('in', 'notin', 'between', 'notbetween'):
+        if type(value) is not list:
+            raise ValueError(f'{operator} requires a list')
+
+        if operator in ('between', 'notbetween') and len(value) != 2:
+            raise ValueError(f'{operator} requires exactly two values')
+
+    # Validate string values.
+    if operator in (
+            'like', 'ilike', 'notlike', 'notilike',
+            'startswith', 'notstartswith',
+            'endswith', 'notendswith',
+            'contains', 'notcontains',
+    ):
+        if type(value) is not str:
+            raise ValueError(f'{operator} requires a string')
+
     if operator in ('like', 'ilike', 'notlike', 'notilike'):
         if not (value.startswith('%') or value.endswith('%')):
             return "%" + value + "%"
@@ -433,7 +505,8 @@ def _parse_sorts(cls, sort):
             if sort_column is not None:
                 orders.append(asc(_get_column_cast(sort_column)))
         elif type(sort_item) is Column:  # User.name
-            if sort_item in cls.get_columns():
+            # if sort_item in cls.get_columns():
+            if cls.get_columns().contains_column(sort_item):  # @2026-10-15 change
                 orders.append(asc(sort_item))
         elif type(sort_item) is UnaryExpression:  # desc(User.name)/asc(User.name)
             orders.append(sort_item)

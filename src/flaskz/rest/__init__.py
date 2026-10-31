@@ -172,9 +172,10 @@ def register_model_add_route(app, model, rule, module=None, action='add', method
     :return:
     """
     methods = methods or ['POST']
-    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash)
+    base_rule, did_rule, suffix_rule = gen_route_rule(rule, strict_slash=strict_slash)
 
-    @app.route(base_rule, methods=methods, endpoint=endpoint)
+    # @app.route(base_rule, methods=methods, endpoint=endpoint)
+    @route(app, base_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('add', base_rule)
     def add():
@@ -214,9 +215,10 @@ def register_model_delete_route(app, model, rule, module=None, action='delete', 
     :return:
     """
     methods = methods or ['DELETE']
-    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, did_suffix='<did>')
+    base_rule, did_rule, suffix_rule = gen_route_rule(rule, strict_slash=strict_slash, did_suffix='<did>')
 
-    @app.route(did_rule, methods=methods, endpoint=endpoint)
+    # @app.route(did_rule, methods=methods, endpoint=endpoint)
+    @route(app, did_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('delete', base_rule)
     def delete(did):
@@ -250,10 +252,12 @@ def register_model_update_route(app, model, rule, module=None, action='update', 
     :return:
     """
     methods = methods or ['PATCH']
-    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, did_suffix='<did>')
+    base_rule, did_rule, suffix_rule = gen_route_rule(rule, strict_slash=strict_slash, did_suffix='<did>')
 
-    @app.route(base_rule, methods=methods, endpoint=endpoint)
-    @app.route(did_rule, methods=methods, endpoint=endpoint)
+    # @app.route(base_rule, methods=methods, endpoint=endpoint)
+    # @app.route(did_rule, methods=methods, endpoint=endpoint)
+    @route(app, base_rule, methods=methods, endpoint=endpoint)
+    @route(app, did_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('update', base_rule)
     def update(did=None):
@@ -293,9 +297,10 @@ def register_model_upsert_route(app, model, rule, module=None, action='upsert', 
     :param endpoint: The name of the route endpoint, default is None(use view function name as endpoint name)
     """
     methods = methods or ['POST']
-    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, rule_suffix=rule_suffix)
+    base_rule, did_rule, suffix_rule = gen_route_rule(rule, strict_slash=strict_slash, rule_suffix=rule_suffix)
 
-    @app.route(suffix_rule, methods=methods, endpoint=endpoint)
+    # @app.route(suffix_rule, methods=methods, endpoint=endpoint)
+    @route(app, suffix_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('upsert', base_rule)
     def upsert():
@@ -336,10 +341,12 @@ def register_model_query_route(app, model, rule, module=None, action=None, metho
     :return:
     """
     methods = methods or ['GET']
-    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, did_suffix='<did>')
+    base_rule, did_rule, suffix_rule = gen_route_rule(rule, strict_slash=strict_slash, did_suffix='<did>')
 
-    @app.route(base_rule, methods=methods, endpoint=endpoint)
-    @app.route(did_rule, methods=methods, endpoint=endpoint)
+    # @app.route(base_rule, methods=methods, endpoint=endpoint)
+    # @app.route(did_rule, methods=methods, endpoint=endpoint)
+    @route(app, base_rule, methods=methods, endpoint=endpoint)
+    @route(app, did_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('query', base_rule)
     def query(did=None):
@@ -387,9 +394,10 @@ def register_model_query_pss_route(app, model, rule, module=None, action=None, m
     :return:
     """
     methods = methods or ['GET', 'POST']
-    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, rule_suffix=rule_suffix)
+    base_rule, did_rule, suffix_rule = gen_route_rule(rule, strict_slash=strict_slash, rule_suffix=rule_suffix)
 
-    @app.route(suffix_rule, methods=methods, endpoint=endpoint)
+    # @app.route(suffix_rule, methods=methods, endpoint=endpoint)
+    @route(app, suffix_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('query_pss', base_rule)
     def query_pss():
@@ -399,9 +407,15 @@ def register_model_query_pss_route(app, model, rule, module=None, action=None, m
         if callable(get_pss_config):  # @2023-10-13 add
             request_json = get_pss_config(request_json)  # @2023-10-23 fix, get_pss_config-->request_json
 
-        success, data = model.query_pss(parse_pss(model, request_json))
-        if success is True:
-            data['data'] = model_to_dict(data.get('data', []), to_json_option)
+        try:  # @2026-10-15 add except
+            pss_option = parse_pss(model, request_json)
+        except ValueError:
+            success = False
+            data = res_status_codes.bad_request
+        else:
+            success, data = model.query_pss(pss_option)
+            if success is True:
+                data['data'] = model_to_dict(data.get('data', []), to_json_option)
 
         flaskz_logger.debug(get_rest_log_msg('Query pss {} data'.format(model.get_class_name()), req_log_data, success, data))
         return create_response(success, data)
@@ -438,9 +452,10 @@ def register_models_query_route(app, models, rule, module=None, action=None, met
     :return:
     """
     methods = methods or ['GET']
-    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, rule_suffix=rule_suffix)
+    base_rule, did_rule, suffix_rule = gen_route_rule(rule, strict_slash=strict_slash, rule_suffix=rule_suffix)
 
-    @app.route(suffix_rule, methods=methods, endpoint=endpoint)
+    # @app.route(suffix_rule, methods=methods, endpoint=endpoint)
+    @route(app, suffix_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('query_multi', base_rule)
     def query_multi():
@@ -501,9 +516,10 @@ def register_model_bulk_add_route(app, model, rule, module=None, action='add', m
     :return:
     """
     methods = methods or ['POST']
-    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, rule_suffix=rule_suffix)
+    base_rule, did_rule, suffix_rule = gen_route_rule(rule, strict_slash=strict_slash, rule_suffix=rule_suffix)
 
-    @app.route(suffix_rule, methods=methods, endpoint=endpoint)
+    # @app.route(suffix_rule, methods=methods, endpoint=endpoint)
+    @route(app, suffix_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('bulk_add', base_rule)
     def bulk_add():
@@ -540,10 +556,12 @@ def register_model_bulk_delete_route(app, model, rule, module=None, action='dele
     :return:
     """
     methods = methods or ['DELETE']
-    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, did_suffix='<ids>', rule_suffix=rule_suffix)
+    base_rule, did_rule, suffix_rule = gen_route_rule(rule, strict_slash=strict_slash, did_suffix='<ids>', rule_suffix=rule_suffix)
 
-    @app.route(suffix_rule, methods=methods, endpoint=endpoint)
-    @app.route(did_rule, methods=methods, endpoint=endpoint)
+    # @app.route(suffix_rule, methods=methods, endpoint=endpoint)
+    # @app.route(did_rule, methods=methods, endpoint=endpoint)
+    @route(app, suffix_rule, methods=methods, endpoint=endpoint)
+    @route(app, did_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('bulk_delete', base_rule)
     def bulk_delete(ids=None):
@@ -557,7 +575,7 @@ def register_model_bulk_delete_route(app, model, rule, module=None, action='dele
         else:
             ids = ids.split(',')
 
-        success, res_data = model.bulk_delete(ids) # @2026-09-03, change
+        success, res_data = model.bulk_delete(ids)  # @2026-09-03, change
 
         res_log_data = get_log_data(res_data)
         log_operation(module, 'delete', success, req_log_data, res_log_data)
@@ -590,9 +608,10 @@ def register_model_bulk_update_route(app, model, rule, module=None, action='upda
     :return:
     """
     methods = methods or ['PATCH']
-    base_rule, did_rule, suffix_rule = _gen_route_rule(rule, strict_slash=strict_slash, rule_suffix=rule_suffix)
+    base_rule, did_rule, suffix_rule = gen_route_rule(rule, strict_slash=strict_slash, rule_suffix=rule_suffix)
 
-    @app.route(suffix_rule, methods=methods, endpoint=endpoint)
+    # @app.route(suffix_rule, methods=methods, endpoint=endpoint)
+    @route(app, suffix_rule, methods=methods, endpoint=endpoint)
     @rest_permission_required(module, action)
     @gen_route_method('bulk_update', base_rule)
     def bulk_update():
@@ -608,26 +627,6 @@ def register_model_bulk_update_route(app, model, rule, module=None, action='upda
         return create_response(success, res_data)
 
 
-def _gen_route_rule(rule, *, strict_slash=True, did_suffix=None, rule_suffix=None):
-    if not rule.startswith('/'):
-        rule = '/' + rule
-    base_rule = rule
-    suffix_rule = rule
-    did_rule = None
-
-    if rule_suffix is not None:
-        suffix_rule = rule = rule.rstrip('/') + '/' + rule_suffix
-
-    if did_suffix is not None:
-        did_rule = rule.rstrip('/') + '/' + did_suffix
-
-    if strict_slash is not False:
-        base_rule = base_rule.rstrip('/') + '/'
-        suffix_rule = suffix_rule.rstrip('/') + '/'
-        did_rule = did_rule.rstrip('/') + '/' if did_rule else None
-
-    return base_rule, did_rule, suffix_rule
-
-
 from ._mgmt import *
 from ._util import *
+from ._route import gen_route_rule, route

@@ -1,11 +1,24 @@
 """
-pip install pycryptodome
+RSA and AES encryption utilities.
+
+Provides RSA key generation, encryption/decryption, digital signing,
+signature verification, and AES symmetric encryption/decryption.
+
+- RSA: OAEP-SHA256 encryption and PKCS#1 v1.5 SHA256 signatures.
+- AES: CBC mode with PKCS7 padding.
+- Supports PEM/DER and Base64-encoded RSA keys.
+- Encrypted data and signatures are returned as Base64 strings.
+- Decrypted data is returned as UTF-8 strings.
+
+Requires:
+    pycryptodome
 """
+
 import base64
-import random
+import secrets
 import string
 
-from Crypto.Cipher import PKCS1_OAEP, AES
+from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
@@ -22,7 +35,7 @@ class RSACipher:
     """
 
     @staticmethod
-    def generate_key(bits=1024, to_base64=True):
+    def generate_key(bits=2048, to_base64=True):
         """
         Generate ras key(private_key, public_key)
 
@@ -105,18 +118,29 @@ class RSACipher:
 
         :return: result: return True on success, otherwise return False
         """
-        text = _to_byte(text)
         try:
+            text = _to_byte(text)
+            signature = _to_byte(signature)
+            signature = base64.b64decode(b''.join(signature.split()), validate=True)
+
             verifier = PKCS1_v1_5.new(RSACipher._import_rsa_key(public_key))
-            return verifier.verify(SHA256.new(text), base64.b64decode(signature))
-        except (Exception,):
+            return verifier.verify(SHA256.new(text), signature)
+        except Exception:
             return False
 
     @staticmethod
     def _import_rsa_key(key):
-        if _is_base64(key):
-            key = base64.b64decode(key)
-        return RSA.importKey(key)
+        if isinstance(key, str):
+            key = key.encode('utf-8')
+
+        try:
+            return RSA.import_key(key)
+        except Exception as original_error:
+            try:
+                decoded = base64.b64decode(b''.join(key.split()), validate=True)
+            except Exception:
+                raise original_error
+            return RSA.import_key(decoded)
 
 
 class AESCipher:
@@ -129,15 +153,15 @@ class AESCipher:
     @staticmethod
     def generate_key():
         """
-        Generate a 16-bit random key
+        Generate a 16-character random AES key
 
         Example:
             aes_key = AESCipher.generate_key()
 
-        :return: key
+        :return: A 16-character string key.
         """
-        key = ''.join(random.choice(string.digits + string.ascii_letters) for _ in range(16))
-        return key
+        # key = ''.join(random.choice(string.digits + string.ascii_letters) for _ in range(16))
+        return ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(16))
 
     @staticmethod
     def encrypt(plaintext, key, iv=None):

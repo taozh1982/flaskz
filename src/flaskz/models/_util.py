@@ -1,17 +1,18 @@
 from contextlib import contextmanager
 
-from .._compat.flask import g
-from sqlalchemy import text, or_, and_, inspect
+from sqlalchemy import and_, inspect, or_, text
 from sqlalchemy.sql.elements import BinaryExpression  # @2024-01-04 update, BinaryExpression not in sqlalchemy.__init__.py when sqlalchemy<2.0.0
 
 from . import DBSession
 from ._base import BaseModelMixin
-from ..utils import get_g_cache, set_g_cache, remove_g_cache, get_dict_mapping, get_ins_mapping
+from .._compat.flask import g
+from ..app import get_context_db_session_cache_enabled, get_context_key, get_context_value, register_context_cleanup, set_context_value
+from ..utils import get_dict_mapping, get_g_cache, get_ins_mapping, remove_g_cache, set_g_cache
 
 __all__ = ['create_instance', 'create_relationships',
            'query_all_models', 'query_multiple_model', 'query_from_g_cache',
            'append_debug_queries', 'get_debug_queries', 'append_query_filter',
-           'get_db_session', 'db_session', 'close_db_session',
+           'get_db_session', 'get_app_context_db_session', 'db_session', 'close_db_session',
            'model_to_dict', 'refresh_instance',
            'is_model_mixin_instance']
 
@@ -103,7 +104,7 @@ def query_multiple_model(*cls_list):
         result = query_multiple_model(User, Role)
 
     :param cls_list:
-    :return:If failed, returns the failed tuple, otherwise, returns the the data list.
+    :return:If failed, returns the failed tuple, otherwise, returns the data list.
     """
 
     return query_all_models(*cls_list)
@@ -122,11 +123,11 @@ def query_from_g_cache(model_class, by_value, attr=None, to_dict=True, mapping_k
         query_from_g_cache(User, 1, to_dict=False)  # id=1(ins) # cache 'instance'
         query_from_g_cache(User, False)  # return 'all' users
 
-    :param model_class: the model class to query and cache, ex)User
-    :param by_value: the value to query, if False return all items ex) 1/'admin'
-    :param attr: the attribute of the data to return, ex)'username'/'email'
-    :param to_dict: cache data as dict or not, ex) True/False
-    :param mapping_key: the key used to create data mapping, if None, use the primary filed of the model_class, ex)'id'
+    :param model_class: the model class to query and cache, e.g. User
+    :param by_value: the value to query, if False return all items, e.g. 1/'admin'
+    :param attr: the attribute of the data to return, e.g. 'username'/'email'
+    :param to_dict: cache data as dict or not, e.g. True/False
+    :param mapping_key: the key used to create data mapping, if None, use the primary filed of the model_class, e.g. 'id'
     :param cache_key: the key used to cache data, if None use 'flaskz_' + class_name + '_model_cached_items'
     :return:
     """
@@ -243,6 +244,11 @@ def get_db_session():
     """
     # @2022-07-26 add `_has_g_context` condition to make sure work without flask request,
     # @2024-02-02 add `reusable_in_flask_g` condition to disable cache
+    # @2026-10-10 add `get_app_context_db_session` logic
+    session = get_app_context_db_session()
+    if session is not None:
+        return session
+
     if getattr(DBSession, 'reusable_in_flask_g', None) is not False and _has_flask_g_context():
         session = get_g_cache('_flaskz_db_session')
         if session is None:
@@ -251,6 +257,31 @@ def get_db_session():
     else:
         session = DBSession()
         setattr(session, '_temporary', True)  # @2022-08-22 add '_temporary' attr
+    return session
+
+
+def get_app_context_db_session():
+    """
+    Get or create a database session from the Flask/FastAPI request context.
+
+    If the context does not exist, return None.
+    Otherwise, reuse the cached session or create a new one.
+
+    :return: SQLAlchemy Session or None.
+    """
+    context_key = get_context_key()
+    if not context_key:
+        return None
+
+    cache_enabled = get_context_db_session_cache_enabled(context_key=context_key)
+    if cache_enabled is False:
+        return None
+
+    session = get_context_value('_flaskz_db_session')
+    if session is None:
+        session = DBSession()
+        set_context_value('_flaskz_db_session', session)
+        register_context_cleanup(session.close, context_key=context_key)
     return session
 
 
@@ -295,11 +326,12 @@ def db_session(do_commit=True):
         yield session
         if do_commit is not False:
             session.commit()
-    except Exception as e:
+    except Exception:
         if do_commit is not False:
             session.rollback()
-        raise e
-    _close_temporary_session(session)
+        raise  # @2026-10-09, raise e-->raise
+    finally:
+        _close_temporary_session(session)
 
 
 @contextmanager
@@ -312,11 +344,12 @@ def _db_session(do_commit, do_rollback):
         yield session
         if do_commit is True:
             session.commit()
-    except Exception as e:
+    except Exception:
         if do_rollback is True:
             session.rollback()
-        raise e
-    _close_temporary_session(session)
+        raise  # @2026-10-09, raise e-->raise
+    finally:
+        _close_temporary_session(session)
 
 
 def model_to_dict(ins, option=None):
